@@ -82,3 +82,30 @@ Desktop.ini
 *.tmp
 *.temp
 .cache
+
+# Package manager lock files (uncomment if you want to ignore them)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# IDE - Additional
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+# Deployment
+.vercel
+.netlify
+
+# Turbo
+.turbo
+
+# Storybook
+storybook-static
+
+# TypeScript
+*.tsbuildinfo
+
+# Optional: Uncomment if using these tools
+# .prettierignore
+# .eslintignore

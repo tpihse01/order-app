@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './OrderPage.css';
 
-function OrderPage() {
+function OrderPage({ onOrder }) {
   const [cart, setCart] = useState([]);
 
   // 임시 상품 데이터 (나중에 API에서 가져올 예정)
@@ -166,7 +166,12 @@ function OrderPage() {
 
   const handleOrder = () => {
     if (cart.length === 0) return;
-    // TODO: 주문 API 호출
+    
+    // 주문을 App.jsx로 전달
+    if (onOrder) {
+      onOrder(cart, totalAmount);
+    }
+    
     alert('주문이 완료되었습니다!');
     setCart([]);
     setSelectedOptions({});
