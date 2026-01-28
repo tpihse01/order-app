@@ -24,6 +24,7 @@
   flex-direction: column;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.2s;
+  min-height: 500px;
 }
 
 .product-card:hover {
@@ -88,10 +89,11 @@
 }
 
 .product-options {
-  margin-bottom: 1rem;
+  margin-bottom: auto;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
 }
 
 .option-checkbox {
@@ -115,8 +117,15 @@
   height: 18px;
 }
 
-.add-to-cart-btn {
+.product-actions {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 60px;
+  justify-content: flex-end;
+}
+
+.add-to-cart-btn {
   padding: 0.75rem;
   border: 1px solid #000099;
   border-radius: 4px;
@@ -126,11 +135,29 @@
   font-size: 1rem;
   font-weight: bold;
   transition: all 0.2s;
+  width: 100%;
 }
 
-.add-to-cart-btn:hover {
+.add-to-cart-btn:hover:not(:disabled) {
   background-color: #0000cc;
   border-color: #0000cc;
+}
+
+.add-to-cart-btn:disabled,
+.add-to-cart-btn.out-of-stock {
+  background-color: #cccccc;
+  border-color: #cccccc;
+  color: #666666;
+  cursor: not-allowed;
+}
+
+.stock-warning {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #f57c00;
+  text-align: center;
+  font-weight: 500;
+  min-height: 1.2rem;
 }
 
 .cart-section {

@@ -1,16 +1,59 @@
 import { useState } from 'react'
 import NavigationBar from './components/NavigationBar'
+import WelcomePage from './pages/WelcomePage'
 import OrderPage from './pages/OrderPage'
 import AdminPage from './pages/AdminPage'
+import ChangePasswordPage from './pages/ChangePasswordPage'
+import PasswordModal from './components/PasswordModal'
 import './App.css'
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('order')
+  const [currentPage, setCurrentPage] = useState('welcome')
   const [orders, setOrders] = useState([])
   const [nextOrderId, setNextOrderId] = useState(1)
+  const [adminPassword, setAdminPassword] = useState('000000')
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
+  const [showChangePassword, setShowChangePassword] = useState(false)
+  const [stock, setStock] = useState([
+    { productId: 1, productName: '아메리카노(ICE)', stock: 10 },
+    { productId: 2, productName: '아메리카노(HOT)', stock: 15 },
+    { productId: 3, productName: '카페라떼', stock: 8 },
+    { productId: 4, productName: '카푸치노', stock: 3 },
+    { productId: 5, productName: '바닐라라떼', stock: 0 },
+    { productId: 6, productName: '카라멜마키아토', stock: 12 }
+  ])
+
+  const handleStart = () => {
+    setCurrentPage('order')
+  }
+
+  const handleGoHome = () => {
+    setCurrentPage('welcome')
+  }
 
   const handleNavigate = (page) => {
-    setCurrentPage(page)
+    if (page === 'admin') {
+      setShowPasswordModal(true)
+      setPasswordError('')
+    } else {
+      setCurrentPage(page)
+    }
+  }
+
+  const handlePasswordConfirm = (password) => {
+    if (password === adminPassword) {
+      setCurrentPage('admin')
+      setShowPasswordModal(false)
+      setPasswordError('')
+    } else {
+      setPasswordError('비밀번호를 다시 입력해 주십시오.')
+    }
+  }
+
+  const handlePasswordChange = (newPassword) => {
+    setAdminPassword(newPassword)
+    setShowChangePassword(false)
   }
 
   const addOrder = (cartItems, totalAmount) => {
@@ -34,24 +77,68 @@ function App() {
     setOrders(prevOrders =>
       prevOrders.map(order =>
         order.orderId === orderId
-          ? { ...order, status: newStatus }
+          ? { 
+              ...order, 
+              status: newStatus,
+              completedTime: newStatus === 'completed' ? new Date() : order.completedTime
+            }
           : order
       )
     )
   }
 
+  const updateStock = (productId, change) => {
+    setStock(prevStock => 
+      prevStock.map(item => {
+        if (item.productId === productId) {
+          const newStock = item.stock + change;
+          return { ...item, stock: newStock >= 0 ? newStock : 0 };
+        }
+        return item;
+      })
+    );
+  }
+
   return (
     <div className="app">
-      <NavigationBar currentPage={currentPage} onNavigate={handleNavigate} />
+      {currentPage !== 'welcome' && (
+        <NavigationBar 
+          currentPage={currentPage} 
+          onNavigate={handleNavigate}
+          onGoHome={handleGoHome}
+          onOpenPasswordChange={() => setShowChangePassword(true)}
+          showSettings={currentPage === 'admin'}
+        />
+      )}
       <main className="app-content">
-        {currentPage === 'order' && <OrderPage onOrder={addOrder} />}
-        {currentPage === 'admin' && (
+        {currentPage === 'welcome' && <WelcomePage onStart={handleStart} />}
+        {currentPage === 'order' && <OrderPage onOrder={addOrder} stock={stock} />}
+        {currentPage === 'admin' && !showChangePassword && (
           <AdminPage 
             orders={orders} 
             onUpdateOrderStatus={updateOrderStatus}
+            stock={stock}
+            onUpdateStock={updateStock}
+          />
+        )}
+        {currentPage === 'admin' && showChangePassword && (
+          <ChangePasswordPage
+            currentPassword={adminPassword}
+            onPasswordChange={handlePasswordChange}
+            onCancel={() => setShowChangePassword(false)}
           />
         )}
       </main>
+      {showPasswordModal && (
+        <PasswordModal
+          onClose={() => {
+            setShowPasswordModal(false)
+            setPasswordError('')
+          }}
+          onConfirm={handlePasswordConfirm}
+          errorMessage={passwordError}
+        />
+      )}
     </div>
   )
 }

@@ -16,6 +16,9 @@ node_modules
 coverage
 *.lcov
 .nyc_output
+test-results/
+playwright-report/
+playwright/.cache/
 
 # Production
 dist
@@ -29,41 +32,24 @@ build
 .env.development.local
 .env.test.local
 .env.production.local
+.env*.local
 
 # Vite
 .vite
 vite.config.*.timestamp-*
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-Desktop.ini
-
-# Windows
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# TypeScript
+*.tsbuildinfo
 
 # Optional npm cache directory
 .npm
+.npm/
 
 # Optional eslint cache
 .eslintcache
+.stylelintcache
 
 # Optional REPL history
 .node_repl_history
@@ -76,22 +62,90 @@ Desktop.ini
 .yarn/unplugged
 .yarn/build-state.yml
 .yarn/install-state.gz
+.yarn/
 .pnp.*
 
-# Temporary files
-*.tmp
-*.temp
-.cache
+# Package manager additional
+.pnpm-store/
+package-lock.json.backup
+yarn.lock.backup
 
 # Package manager lock files (uncomment if you want to ignore them)
 # package-lock.json
 # yarn.lock
 # pnpm-lock.yaml
 
+# Temporary files
+*.tmp
+*.temp
+.cache
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.history/
+
+.idea
+*.iml
+*.iws
+*.ipr
+out/
+
+*.swp
+*.swo
+
 # IDE - Additional
 *.code-workspace
 *.sublime-project
 *.sublime-workspace
+.atom/
+
+# IDE - Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+Icon
+
+# Windows
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
 
 # Deployment
 .vercel
@@ -103,9 +157,11 @@ Desktop.ini
 # Storybook
 storybook-static
 
-# TypeScript
-*.tsbuildinfo
+# Debug
+*.pem
+*.pid
+*.seed
+*.pid.lock
 
-# Optional: Uncomment if using these tools
-# .prettierignore
-# .eslintignore
+# Local development
+.local

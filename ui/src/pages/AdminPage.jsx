@@ -1,16 +1,8 @@
 import { useState, useMemo } from 'react';
 import './AdminPage.css';
 
-function AdminPage({ orders = [], onUpdateOrderStatus }) {
-  // 임시 데이터 (나중에 API에서 가져올 예정)
-  const [stock, setStock] = useState([
-    { productId: 1, productName: '아메리카노(ICE)', stock: 10 },
-    { productId: 2, productName: '아메리카노(HOT)', stock: 15 },
-    { productId: 3, productName: '카페라떼', stock: 8 },
-    { productId: 4, productName: '카푸치노', stock: 3 },
-    { productId: 5, productName: '바닐라라떼', stock: 0 },
-    { productId: 6, productName: '카라멜마키아토', stock: 12 }
-  ]);
+function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock }) {
+  const [activeTab, setActiveTab] = useState('in-progress');
 
   // 주문 통계를 주문 목록에서 동적으로 계산
   const orderStats = useMemo(() => {
@@ -23,15 +15,9 @@ function AdminPage({ orders = [], onUpdateOrderStatus }) {
   }, [orders]);
 
   const updateStock = (productId, change) => {
-    setStock(prevStock => 
-      prevStock.map(item => {
-        if (item.productId === productId) {
-          const newStock = item.stock + change;
-          return { ...item, stock: newStock >= 0 ? newStock : 0 };
-        }
-        return item;
-      })
-    );
+    if (onUpdateStock) {
+      onUpdateStock(productId, change);
+    }
   };
 
   const getStockStatus = (stockCount) => {
@@ -89,8 +75,32 @@ function AdminPage({ orders = [], onUpdateOrderStatus }) {
     const day = date.getDate();
     const hours = date.getHours();
     const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${month}월 ${day}일 ${hours}:${minutes}`;
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${month}월 ${day}일 ${hours}:${minutes}:${seconds}`;
   };
+
+  const formatDateFull = (date) => {
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${month}월 ${day}일 ${hours}:${minutes}:${seconds}`;
+  };
+
+  // 진행 중 주문 (pending, in_progress) - 주문 접수 시각 오름차순
+  const inProgressOrders = orders
+    .filter(order => order.status === 'pending' || order.status === 'in_progress')
+    .sort((a, b) => new Date(a.orderTime) - new Date(b.orderTime));
+
+  // 완료 주문 (completed) - 제조 완료 시각 내림차순
+  const completedOrders = orders
+    .filter(order => order.status === 'completed')
+    .sort((a, b) => {
+      const aCompletedTime = a.completedTime || a.orderTime;
+      const bCompletedTime = b.completedTime || b.orderTime;
+      return new Date(bCompletedTime) - new Date(aCompletedTime);
+    });
 
   const formatPrice = (price) => {
     return price.toLocaleString('ko-KR') + '원';
@@ -145,55 +155,109 @@ function AdminPage({ orders = [], onUpdateOrderStatus }) {
 
       <div className="orders-section">
         <h2>주문 현황</h2>
-        {orders.length === 0 ? (
-          <p className="empty-orders">대기 중인 주문이 없습니다.</p>
-        ) : (
-          <div className="orders-list">
-            {orders
-              .sort((a, b) => new Date(b.orderTime) - new Date(a.orderTime))
-              .map(order => (
-                <div key={order.orderId} className={`order-card order-status-${order.status}`}>
-                  <div className="order-header">
-                    <div className="order-time">
-                      {formatDate(order.orderTime)}
-                    </div>
-                    <div className="order-status-badge">
-                      {getOrderStatusText(order.status)}
-                    </div>
-                  </div>
-                  <div className="order-details">
-                    {order.items.map((item, index) => (
-                      <div key={index} className="order-item">
-                        <span className="order-item-name">
-                          {item.productName} x {item.quantity}
-                          {item.options && item.options.length > 0 && 
-                            ` (${item.options.map(opt => opt.optionName || opt.name).join(', ')})`
-                          }
-                        </span>
-                        <span className="order-item-price">{formatPrice(item.price)}</span>
+        <div className="orders-tabs">
+          <button
+            className={`orders-tab ${activeTab === 'in-progress' ? 'active' : ''}`}
+            onClick={() => setActiveTab('in-progress')}
+          >
+            진행 중
+          </button>
+          <button
+            className={`orders-tab ${activeTab === 'completed' ? 'active' : ''}`}
+            onClick={() => setActiveTab('completed')}
+          >
+            완료
+          </button>
+        </div>
+        {activeTab === 'in-progress' && (
+          <>
+            {inProgressOrders.length === 0 ? (
+              <p className="empty-orders">진행 중인 주문이 없습니다.</p>
+            ) : (
+              <div className="orders-list">
+                {inProgressOrders.map(order => (
+                  <div key={order.orderId} className={`order-card order-status-${order.status}`}>
+                    <div className="order-header">
+                      <div className="order-time">
+                        {formatDate(order.orderTime)}
                       </div>
-                    ))}
-                    <div className="order-total">
-                      <span className="order-total-label">주문 금액:</span>
-                      <span className="order-total-amount">{formatPrice(order.totalAmount)}</span>
+                      <div className="order-status-badge">
+                        {getOrderStatusText(order.status)}
+                      </div>
                     </div>
-                  </div>
-                  <div className="order-actions">
-                    {order.status !== 'completed' && (
+                    <div className="order-details">
+                      {order.items.map((item, index) => (
+                        <div key={index} className="order-item">
+                          <span className="order-item-name">
+                            {item.productName} x {item.quantity}
+                            {item.options && item.options.length > 0 && 
+                              ` (${item.options.map(opt => opt.optionName || opt.name).join(', ')})`
+                            }
+                          </span>
+                          <span className="order-item-price">{formatPrice(item.price)}</span>
+                        </div>
+                      ))}
+                      <div className="order-total">
+                        <span className="order-total-label">주문 금액:</span>
+                        <span className="order-total-amount">{formatPrice(order.totalAmount)}</span>
+                      </div>
+                    </div>
+                    <div className="order-actions">
                       <button 
                         className={`order-action-btn ${order.status === 'in_progress' ? 'complete-btn' : ''}`}
                         onClick={() => handleOrderAction(order)}
                       >
                         {getOrderButtonText(order.status)}
                       </button>
-                    )}
-                    {order.status === 'completed' && (
-                      <span className="order-completed">완료됨</span>
-                    )}
+                    </div>
                   </div>
-                </div>
-              ))}
-          </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+        {activeTab === 'completed' && (
+          <>
+            {completedOrders.length === 0 ? (
+              <p className="empty-orders">완료된 주문이 없습니다.</p>
+            ) : (
+              <div className="orders-list">
+                {completedOrders.map(order => (
+                  <div key={order.orderId} className={`order-card order-status-${order.status}`}>
+                    <div className="order-header">
+                      <div className="order-time-info">
+                        <div className="order-time-label">주문: {formatDateFull(order.orderTime)}</div>
+                        <div className="order-time-label">완료: {formatDateFull(order.completedTime || order.orderTime)}</div>
+                      </div>
+                      <div className="order-status-badge">
+                        {getOrderStatusText(order.status)}
+                      </div>
+                    </div>
+                    <div className="order-details">
+                      {order.items.map((item, index) => (
+                        <div key={index} className="order-item">
+                          <span className="order-item-name">
+                            {item.productName} x {item.quantity}
+                            {item.options && item.options.length > 0 && 
+                              ` (${item.options.map(opt => opt.optionName || opt.name).join(', ')})`
+                            }
+                          </span>
+                          <span className="order-item-price">{formatPrice(item.price)}</span>
+                        </div>
+                      ))}
+                      <div className="order-total">
+                        <span className="order-total-label">주문 금액:</span>
+                        <span className="order-total-amount">{formatPrice(order.totalAmount)}</span>
+                      </div>
+                    </div>
+                    <div className="order-actions">
+                      <span className="order-completed">완료됨</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

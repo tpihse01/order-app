@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './OrderPage.css';
 
-function OrderPage({ onOrder }) {
+function OrderPage({ onOrder, stock = [] }) {
   const [cart, setCart] = useState([]);
 
   // 임시 상품 데이터 (나중에 API에서 가져올 예정)
@@ -162,6 +162,11 @@ function OrderPage({ onOrder }) {
     return price.toLocaleString('ko-KR') + '원';
   };
 
+  const getProductStock = (productId) => {
+    const stockItem = stock.find(s => s.productId === productId);
+    return stockItem ? stockItem.stock : 0;
+  };
+
   const totalAmount = cart.reduce((sum, item) => sum + item.totalPrice, 0);
 
   const handleOrder = () => {
@@ -214,12 +219,30 @@ function OrderPage({ onOrder }) {
                   </label>
                 ))}
               </div>
-              <button 
-                className="add-to-cart-btn"
-                onClick={() => addToCart(product)}
-              >
-                담기
-              </button>
+              <div className="product-actions">
+                {(() => {
+                  const productStock = getProductStock(product.id);
+                  const isOutOfStock = productStock === 0;
+                  const isLowStock = productStock > 0 && productStock <= 10;
+                  
+                  return (
+                    <>
+                      <button 
+                        className={`add-to-cart-btn ${isOutOfStock ? 'out-of-stock' : ''}`}
+                        onClick={() => addToCart(product)}
+                        disabled={isOutOfStock}
+                      >
+                        {isOutOfStock ? '품절' : '담기'}
+                      </button>
+                      {isLowStock ? (
+                        <p className="stock-warning">재고가 {productStock}개 남았습니다.</p>
+                      ) : (
+                        <p className="stock-warning" style={{ visibility: 'hidden' }}>&nbsp;</p>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
             </div>
           ))}
         </div>

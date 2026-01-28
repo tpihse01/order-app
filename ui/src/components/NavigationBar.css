@@ -7,36 +7,65 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .nav-logo {
   font-size: 1.5rem;
   font-weight: bold;
   color: #ffffff;
 }
 
-.nav-tabs {
+.nav-home-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ffffff;
+  background-color: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #ffffff;
+  border-radius: 4px;
+  transition: all 0.2s;
+  font-weight: bold;
+}
+
+.nav-home-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.nav-icon-btn {
+  padding: 0.5rem;
+  border: 1px solid #ffffff;
+  background-color: transparent;
+  cursor: pointer;
+  color: #ffffff;
+  border-radius: 4px;
+  transition: all 0.2s;
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.nav-icon-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .nav-tab {
   padding: 0.5rem 1rem;
-  border: 1px solid #000099;
-  background-color: #ffffff;
+  border: 1px solid #ffffff;
+  background-color: transparent;
   cursor: pointer;
   font-size: 1rem;
-  color: #000099;
+  color: #ffffff;
   border-radius: 4px;
   transition: all 0.2s;
   font-weight: bold;
 }
 
 .nav-tab:hover {
-  background-color: #f0f0f0;
-}
-
-.nav-tab.active {
-  background-color: #000099;
-  border-color: #ffffff;
-  color: #ffffff;
-  font-weight: bold;
+  background-color: rgba(255, 255, 255, 0.2);
 }
