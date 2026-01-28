@@ -52,6 +52,29 @@ router.get('/', async (req, res) => {
   }
 });
 
+// POST /api/menus/reset-stock - 모든 재고를 0으로 초기화 (특수 경로를 먼저 정의)
+router.post('/reset-stock', async (req, res) => {
+  try {
+    const updateQuery = 'UPDATE menus SET stock = 0 RETURNING id, stock';
+    const result = await pool.query(updateQuery);
+
+    res.json({
+      success: true,
+      message: '모든 재고가 0으로 초기화되었습니다.',
+      data: {
+        updatedCount: result.rows.length,
+        menus: result.rows
+      }
+    });
+  } catch (error) {
+    console.error('Error resetting stock:', error);
+    res.status(500).json({
+      success: false,
+      error: '재고 초기화 중 오류가 발생했습니다.'
+    });
+  }
+});
+
 // GET /api/menus/:menuId - 메뉴 상세 조회
 router.get('/:menuId', async (req, res) => {
   try {
@@ -112,39 +135,70 @@ router.get('/:menuId', async (req, res) => {
 router.patch('/:menuId/stock', async (req, res) => {
   try {
     const { menuId } = req.params;
-    const { change } = req.body;
+    const { change, stock: newStockValue } = req.body;
 
-    if (typeof change !== 'number') {
+    // change 또는 stock 중 하나만 사용
+    let finalStock;
+    
+    if (newStockValue !== undefined) {
+      // 직접 재고 값 설정
+      if (typeof newStockValue !== 'number' || newStockValue < 0) {
+        return res.status(400).json({
+          success: false,
+          error: '재고는 0 이상의 숫자여야 합니다.'
+        });
+      }
+      finalStock = newStockValue;
+    } else if (change !== undefined) {
+      // 재고 변경량으로 계산
+      if (typeof change !== 'number') {
+        return res.status(400).json({
+          success: false,
+          error: '재고 변경량은 숫자여야 합니다.'
+        });
+      }
+
+      // 현재 재고 조회
+      const currentStockQuery = 'SELECT stock FROM menus WHERE id = $1';
+      const currentResult = await pool.query(currentStockQuery, [menuId]);
+
+      if (currentResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: '메뉴를 찾을 수 없습니다.'
+        });
+      }
+
+      const currentStock = currentResult.rows[0].stock;
+      finalStock = currentStock + change;
+
+      if (finalStock < 0) {
+        return res.status(400).json({
+          success: false,
+          error: '재고는 0 이상이어야 합니다.'
+        });
+      }
+    } else {
       return res.status(400).json({
         success: false,
-        error: '재고 변경량은 숫자여야 합니다.'
+        error: '재고 변경량(change) 또는 재고 값(stock)이 필요합니다.'
       });
     }
 
-    // 현재 재고 조회
-    const currentStockQuery = 'SELECT stock FROM menus WHERE id = $1';
-    const currentResult = await pool.query(currentStockQuery, [menuId]);
+    // 메뉴 존재 확인
+    const menuCheckQuery = 'SELECT id FROM menus WHERE id = $1';
+    const menuCheckResult = await pool.query(menuCheckQuery, [menuId]);
 
-    if (currentResult.rows.length === 0) {
+    if (menuCheckResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: '메뉴를 찾을 수 없습니다.'
       });
     }
 
-    const currentStock = currentResult.rows[0].stock;
-    const newStock = currentStock + change;
-
-    if (newStock < 0) {
-      return res.status(400).json({
-        success: false,
-        error: '재고는 0 이상이어야 합니다.'
-      });
-    }
-
     // 재고 업데이트
     const updateQuery = 'UPDATE menus SET stock = $1 WHERE id = $2 RETURNING id, stock';
-    const updateResult = await pool.query(updateQuery, [newStock, menuId]);
+    const updateResult = await pool.query(updateQuery, [finalStock, menuId]);
 
     res.json({
       success: true,

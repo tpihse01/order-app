@@ -2,9 +2,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
+  padding: 0.7rem 1.4rem; /* 세로 크기 70% */
   background-color: #000099;
   border-bottom: 1px solid #e0e0e0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-height: 42px; /* 높이 70% */
 }
 
 .nav-left {
@@ -14,17 +19,17 @@
 }
 
 .nav-logo {
-  font-size: 1.5rem;
+  font-size: 1.05rem; /* 폰트 크기 70% */
   font-weight: bold;
   color: #ffffff;
 }
 
 .nav-home-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.35rem 0.7rem; /* 패딩 70% */
   border: 1px solid #ffffff;
   background-color: transparent;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.7rem; /* 폰트 크기 70% */
   color: #ffffff;
   border-radius: 4px;
   transition: all 0.2s;
@@ -36,7 +41,7 @@
 }
 
 .nav-icon-btn {
-  padding: 0.5rem;
+  padding: 0.35rem; /* 패딩 70% */
   border: 1px solid #ffffff;
   background-color: transparent;
   cursor: pointer;
@@ -46,8 +51,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 28px; /* 크기 70% */
+  height: 28px;
+}
+
+.nav-icon-btn svg {
+  width: 14px; /* 아이콘 크기 70% */
+  height: 14px;
 }
 
 .nav-icon-btn:hover {
@@ -55,11 +65,11 @@
 }
 
 .nav-tab {
-  padding: 0.5rem 1rem;
+  padding: 0.35rem 0.7rem; /* 패딩 70% */
   border: 1px solid #ffffff;
   background-color: transparent;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.7rem; /* 폰트 크기 70% */
   color: #ffffff;
   border-radius: 4px;
   transition: all 0.2s;

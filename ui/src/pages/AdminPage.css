@@ -1,5 +1,6 @@
 .admin-page {
-  padding: 2rem;
+  padding: 1.5rem;
+  padding-top: calc(1.5rem + 42px); /* 네비게이션 바 높이만큼 상단 여백 (70% 크기) */
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -18,22 +19,69 @@
   color: #333;
 }
 
-.stats-summary {
-  padding: 1.5rem;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  font-size: 1.1rem;
-  color: #333;
-  border: 1px solid #e0e0e0;
+.stock-section-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
-.stats-summary span {
+.stock-section-header h2 {
+  margin-bottom: 0;
+}
+
+.reset-stock-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d32f2f;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #d32f2f;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.reset-stock-btn:hover {
+  background-color: #ffebee;
+  border-color: #c62828;
+}
+
+.stats-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
   display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  border-color: #000099;
+}
+
+.stat-label {
+  font-size: 1rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #000099;
+  line-height: 1;
 }
 
 .stock-grid {
@@ -99,22 +147,49 @@
 
 .stock-controls {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
 .stock-btn {
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
   border: 1px solid #ccc;
   border-radius: 4px;
   background-color: #fff;
   cursor: pointer;
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: bold;
   transition: background-color 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.stock-input {
+  width: 60px;
+  height: 28px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0;
+  -moz-appearance: textfield;
+}
+
+.stock-input::-webkit-outer-spin-button,
+.stock-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.stock-input:focus {
+  outline: none;
+  border-color: #000099;
+  box-shadow: 0 0 0 2px rgba(0, 0, 153, 0.1);
 }
 
 .stock-btn:hover {
@@ -323,6 +398,187 @@
 .order-time-label {
   font-size: 0.85rem;
   color: #666;
+}
+
+/* 재고 초기화 확인 모달 */
+.reset-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.reset-confirm-modal {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  width: 90%;
+  animation: slideUp 0.3s ease-out;
+}
+
+.reset-confirm-header {
+  padding: 1.5rem 1.5rem 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.reset-confirm-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.reset-confirm-body {
+  padding: 1.5rem;
+}
+
+.reset-confirm-body p {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  color: #333;
+  line-height: 1.5;
+}
+
+.reset-confirm-warning {
+  color: #d32f2f;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.reset-confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e0e0e0;
+  justify-content: flex-end;
+}
+
+.reset-confirm-cancel,
+.reset-confirm-ok {
+  padding: 0.6rem 1.2rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reset-confirm-cancel {
+  background-color: #fff;
+  color: #333;
+  border-color: #ccc;
+}
+
+.reset-confirm-cancel:hover {
+  background-color: #f5f5f5;
+}
+
+.reset-confirm-ok {
+  background-color: #d32f2f;
+  color: #fff;
+  border-color: #d32f2f;
+}
+
+.reset-confirm-ok:hover {
+  background-color: #c62828;
+  border-color: #c62828;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 재고 초기화 성공 알림 */
+.reset-success-notification {
+  position: fixed;
+  top: 42px; /* 네비게이션 바 높이 */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10001; /* 확인 모달보다 위에 표시 */
+  animation: slideDown 0.3s ease-out;
+}
+
+.reset-success-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background-color: #4caf50;
+  color: #ffffff;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: 350px;
+  max-width: 90vw;
+}
+
+.reset-success-icon {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.reset-success-message {
+  font-size: 1rem;
+  font-weight: 600;
+  flex: 1;
+}
+
+.reset-success-close {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.reset-success-close:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 @media (max-width: 768px) {

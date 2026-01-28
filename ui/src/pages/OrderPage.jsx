@@ -1,78 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import './OrderPage.css';
 
-function OrderPage({ onOrder, stock = [] }) {
+function OrderPage({ onOrder, stock = [], menus = [], stockUpdateKey = 0 }) {
   const [cart, setCart] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [showOrderSuccess, setShowOrderSuccess] = useState(false);
 
-  // 임시 상품 데이터 (나중에 API에서 가져올 예정)
-  const [products] = useState([
-    {
-      id: 1,
-      name: '아메리카노(ICE)',
-      price: 4000,
-      description: '간단한 설명...',
-      imageUrl: 'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=600&h=600&fit=crop&q=80&auto=format',
-      options: [
-        { id: 1, name: '샷 추가', additionalPrice: 500 },
-        { id: 2, name: '시럽 추가', additionalPrice: 0 }
-      ]
-    },
-    {
-      id: 2,
-      name: '아메리카노(HOT)',
-      price: 4000,
-      description: '간단한 설명...',
-      imageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&h=600&fit=crop&q=80&auto=format',
-      options: [
-        { id: 1, name: '샷 추가', additionalPrice: 500 },
-        { id: 2, name: '시럽 추가', additionalPrice: 0 }
-      ]
-    },
-    {
-      id: 3,
-      name: '카페라떼',
-      price: 5000,
-      description: '간단한 설명...',
-      imageUrl: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=600&h=600&fit=crop&q=80&auto=format',
-      options: [
-        { id: 1, name: '샷 추가', additionalPrice: 500 },
-        { id: 2, name: '시럽 추가', additionalPrice: 0 }
-      ]
-    },
-    {
-      id: 4,
-      name: '카푸치노',
-      price: 5500,
-      description: '간단한 설명...',
-      imageUrl: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=600&h=600&fit=crop&q=80&auto=format',
-      options: [
-        { id: 1, name: '샷 추가', additionalPrice: 500 },
-        { id: 2, name: '시럽 추가', additionalPrice: 0 }
-      ]
-    },
-    {
-      id: 5,
-      name: '바닐라라떼',
-      price: 6000,
-      description: '간단한 설명...',
-      imageUrl: '/vanilla-latte.png',
-      options: [
-        { id: 1, name: '샷 추가', additionalPrice: 500 },
-        { id: 2, name: '시럽 추가', additionalPrice: 0 }
-      ]
-    },
-    {
-      id: 6,
-      name: '카라멜마키아토',
-      price: 6500,
-      description: '간단한 설명...',
-      imageUrl: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=600&h=600&fit=crop&q=80&auto=format',
-      options: [
-        { id: 1, name: '샷 추가', additionalPrice: 500 },
-        { id: 2, name: '시럽 추가', additionalPrice: 0 }
-      ]
+  // menus와 stock prop이 변경되면 products로 변환 (재고 정보 포함)
+  // stock이 변경될 때마다 products를 업데이트하여 실시간 반영
+  // stockUpdateKey도 의존성에 추가하여 재고 업데이트 시 강제로 실행
+  useEffect(() => {
+    if (menus && menus.length > 0) {
+      const formattedProducts = menus.map(menu => {
+        // stock prop에서 해당 메뉴의 재고 정보 찾기 (항상 최신 값)
+        const stockItem = stock.find(s => s.productId === menu.id)
+        const currentStock = stockItem ? stockItem.stock : menu.stock
+        return {
+          id: menu.id,
+          name: menu.name,
+          price: menu.price,
+          description: menu.description || '간단한 설명...',
+          imageUrl: menu.image_url || null,
+          stock: currentStock, // stock prop 우선 사용
+          options: (menu.options || []).map(opt => ({
+            id: opt.id,
+            name: opt.name,
+            additionalPrice: opt.additional_price || 0
+          }))
+        }
+      })
+      setProducts(formattedProducts)
     }
-  ]);
+  }, [menus, stock, stockUpdateKey])
 
   const [selectedOptions, setSelectedOptions] = useState({});
 
@@ -140,12 +99,8 @@ function OrderPage({ onOrder, stock = [] }) {
       setCart([...cart, cartItem]);
     }
 
-    // 담기 후 체크박스 초기화
-    setSelectedOptions(prev => {
-      const newOptions = { ...prev };
-      delete newOptions[product.id];
-      return newOptions;
-    });
+    // 담기 후 모든 메뉴의 체크박스 초기화
+    setSelectedOptions({});
   };
 
   const updateCartItemQuantity = (index, change) => {
@@ -182,28 +137,59 @@ function OrderPage({ onOrder, stock = [] }) {
     return price.toLocaleString('ko-KR') + '원';
   };
 
-  const getProductStock = (productId) => {
-    const stockItem = stock.find(s => s.productId === productId);
-    return stockItem ? stockItem.stock : 0;
-  };
+  // stock prop을 직접 사용하는 함수 (항상 최신 값 참조)
+  // useMemo를 사용하여 stock이 변경될 때만 함수 재생성
+  const getProductStock = useMemo(() => {
+    return (productId) => {
+      const stockItem = stock.find(s => s.productId === productId);
+      return stockItem ? stockItem.stock : 0;
+    };
+  }, [stock]);
 
   const totalAmount = cart.reduce((sum, item) => sum + item.totalPrice, 0);
 
-  const handleOrder = () => {
+  const handleOrder = async () => {
     if (cart.length === 0) return;
     
-    // 주문을 App.jsx로 전달
+    // 주문을 App.jsx로 전달 (API 호출 포함)
     if (onOrder) {
-      onOrder(cart, totalAmount);
+      try {
+        const result = await onOrder(cart, totalAmount);
+        console.log('주문 결과:', result);
+        // 주문 성공 시 장바구니 비우기 및 알림 표시
+        setCart([]);
+        setSelectedOptions({});
+        // 알림 메시지 표시 (React 컴포넌트로)
+        setShowOrderSuccess(true);
+        // 3초 후 자동으로 사라지게
+        setTimeout(() => {
+          setShowOrderSuccess(false);
+        }, 3000);
+      } catch (error) {
+        console.error('주문 처리 오류:', error);
+        alert(error.message || '주문 처리 중 오류가 발생했습니다.');
+      }
     }
-    
-    alert('주문이 완료되었습니다!');
-    setCart([]);
-    setSelectedOptions({});
   };
 
   return (
     <div className="order-page">
+      {/* 주문 접수 성공 알림 */}
+      {showOrderSuccess && (
+        <div className="order-success-notification">
+          <div className="order-success-content">
+            <span className="order-success-icon">✓</span>
+            <span className="order-success-message">주문이 접수되었습니다.</span>
+            <button 
+              className="order-success-close"
+              onClick={() => setShowOrderSuccess(false)}
+              aria-label="닫기"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
       <div className="products-section">
         <div className="products-grid">
           {products.map(product => (
@@ -241,7 +227,8 @@ function OrderPage({ onOrder, stock = [] }) {
               </div>
               <div className="product-actions">
                 {(() => {
-                  const productStock = getProductStock(product.id);
+                  // products 상태에서 직접 재고 가져오기 (항상 최신 값)
+                  const productStock = product.stock !== undefined ? product.stock : getProductStock(product.id);
                   const isOutOfStock = productStock === 0;
                   const isLowStock = productStock > 0 && productStock <= 10;
                   
@@ -255,7 +242,7 @@ function OrderPage({ onOrder, stock = [] }) {
                         {isOutOfStock ? '품절' : '담기'}
                       </button>
                       {isLowStock ? (
-                        <p className="stock-warning">재고가 {productStock}개 남았습니다.</p>
+                        <p className="stock-warning">재고 {productStock}개</p>
                       ) : (
                         <p className="stock-warning" style={{ visibility: 'hidden' }}>&nbsp;</p>
                       )}
@@ -271,7 +258,9 @@ function OrderPage({ onOrder, stock = [] }) {
       <div className="cart-section">
         <h2 className="cart-title">장바구니</h2>
         {cart.length === 0 ? (
-          <p className="empty-cart">장바구니가 비어있습니다.</p>
+          <p className="empty-cart">
+            장바구니가<br />비어있습니다
+          </p>
         ) : (
           <>
             <div className="cart-items-scrollable">
@@ -279,39 +268,41 @@ function OrderPage({ onOrder, stock = [] }) {
                 const uniqueKey = `${item.productId}-${item.selectedOptions.map(o => o.id).sort().join('-')}-${index}`;
                 return (
                 <div key={uniqueKey} className="cart-item">
-                  <div className="cart-item-info">
+                  <div className="cart-item-row">
                     <span className="cart-item-name">
                       {item.productName}
                       {item.selectedOptions.length > 0 && 
                         ` (${item.selectedOptions.map(opt => opt.name).join(', ')})`
                       }
                     </span>
-                  </div>
-                  <div className="quantity-controls">
                     <button 
-                      className="quantity-btn minus"
-                      onClick={() => updateCartItemQuantity(index, -1)}
-                      aria-label="수량 감소"
+                      className="remove-btn"
+                      onClick={() => removeCartItem(index)}
+                      aria-label="아이템 삭제"
                     >
-                      -
-                    </button>
-                    <span className="quantity-display">{item.quantity}</span>
-                    <button 
-                      className="quantity-btn plus"
-                      onClick={() => updateCartItemQuantity(index, 1)}
-                      aria-label="수량 증가"
-                    >
-                      +
+                      ✕
                     </button>
                   </div>
-                  <span className="cart-item-price">{formatPrice(item.totalPrice)}</span>
-                  <button 
-                    className="remove-btn"
-                    onClick={() => removeCartItem(index)}
-                    aria-label="아이템 삭제"
-                  >
-                    ✕
-                  </button>
+                  <div className="cart-item-row">
+                    <div className="quantity-controls">
+                      <button 
+                        className="quantity-btn minus"
+                        onClick={() => updateCartItemQuantity(index, -1)}
+                        aria-label="수량 감소"
+                      >
+                        -
+                      </button>
+                      <span className="quantity-display">{item.quantity}</span>
+                      <button 
+                        className="quantity-btn plus"
+                        onClick={() => updateCartItemQuantity(index, 1)}
+                        aria-label="수량 증가"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <span className="cart-item-price">{formatPrice(item.totalPrice)}</span>
+                  </div>
                 </div>
               );
               })}

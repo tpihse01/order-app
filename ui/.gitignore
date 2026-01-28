@@ -28,11 +28,15 @@ build
 
 # Environment variables
 .env
+.env.*
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 .env*.local
+.env.backup
+# .env.example은 템플릿이므로 커밋 가능 (필요시 주석 해제)
+# .env.example
 
 # Vite
 .vite

@@ -1,20 +1,15 @@
 import { useState } from 'react';
 import './ChangePasswordPage.css';
 
-function ChangePasswordPage({ currentPassword, onPasswordChange, onCancel }) {
+function ChangePasswordPage({ onPasswordChange, onCancel }) {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
-    if (oldPassword !== currentPassword) {
-      setError('이전 비밀번호가 일치하지 않습니다.');
-      return;
-    }
 
     if (newPassword.length !== 6) {
       setError('새 비밀번호는 6자리여야 합니다.');
@@ -31,9 +26,10 @@ function ChangePasswordPage({ currentPassword, onPasswordChange, onCancel }) {
       return;
     }
 
-    onPasswordChange(newPassword);
-    alert('비밀번호가 변경되었습니다.');
-    onCancel();
+    // API 호출은 App.jsx에서 처리
+    if (onPasswordChange) {
+      await onPasswordChange(oldPassword, newPassword);
+    }
   };
 
   const handleInputChange = (e, setter) => {
