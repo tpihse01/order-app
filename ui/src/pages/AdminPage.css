@@ -19,18 +19,23 @@
   color: #333;
 }
 
-.stock-section-header {
+.dashboard-section-header,
+.stock-section-header,
+.orders-section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
 }
 
-.stock-section-header h2 {
+.dashboard-section-header h2,
+.stock-section-header h2,
+.orders-section-header h2 {
   margin-bottom: 0;
 }
 
-.reset-stock-btn {
+.reset-stock-btn,
+.reset-dashboard-btn {
   padding: 0.5rem 1rem;
   border: 1px solid #d32f2f;
   border-radius: 4px;
@@ -42,7 +47,8 @@
   transition: all 0.2s;
 }
 
-.reset-stock-btn:hover {
+.reset-stock-btn:hover,
+.reset-dashboard-btn:hover {
   background-color: #ffebee;
   border-color: #c62828;
 }

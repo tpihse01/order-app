@@ -18,7 +18,8 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { logger } from '../utils/logger';
 import { formatPrice } from '../utils/formatters';
 import { getErrorMessage } from '../utils/errorHandler';
-import { findStockByProductId, getSortedOptionIds, formatOptionsToString } from '../utils/arrayHelpers';
+import { findStockByProductId } from '../utils/stockHelpers';
+import { getSortedOptionIds, formatOptionsToString } from '../utils/arrayHelpers';
 import { validateNumber } from '../utils/validators';
 
 function OrderPage({ onOrder, stock = [], menus = [], stockUpdateKey = 0, loading = false }) {

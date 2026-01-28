@@ -80,20 +80,40 @@ router.patch('/admin-password', async (req, res) => {
       });
     }
 
-    // 새 비밀번호 저장 (새 레코드로 추가하여 이력 관리)
-    const insertQuery = `
-      INSERT INTO settings (key, value, changed_at)
-      VALUES ('admin_password', $1, CURRENT_TIMESTAMP)
+    // 새 비밀번호 저장 (기존 레코드 업데이트)
+    // UNIQUE 제약조건 때문에 INSERT 대신 UPDATE 사용
+    const updateQuery = `
+      UPDATE settings 
+      SET value = $1, changed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE key = 'admin_password'
       RETURNING changed_at
     `;
 
-    const insertResult = await pool.query(insertQuery, [new_password]);
+    const updateResult = await pool.query(updateQuery, [new_password]);
+    
+    // 업데이트된 행이 없으면 새로 생성 (초기 설정 시)
+    if (updateResult.rowCount === 0) {
+      const insertQuery = `
+        INSERT INTO settings (key, value, changed_at)
+        VALUES ('admin_password', $1, CURRENT_TIMESTAMP)
+        RETURNING changed_at
+      `;
+      const insertResult = await pool.query(insertQuery, [new_password]);
+      res.json({
+        success: true,
+        message: '비밀번호가 변경되었습니다.',
+        data: {
+          changed_at: insertResult.rows[0].changed_at
+        }
+      });
+      return;
+    }
 
     res.json({
       success: true,
       message: '비밀번호가 변경되었습니다.',
       data: {
-        changed_at: insertResult.rows[0].changed_at
+        changed_at: updateResult.rows[0].changed_at
       }
     });
   } catch (error) {

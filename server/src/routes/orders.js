@@ -385,4 +385,51 @@ router.patch('/:orderId', async (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/orders
+ * 모든 주문 삭제
+ * 
+ * 모든 주문과 관련 데이터를 삭제합니다.
+ * 
+ * @route DELETE /api/orders
+ * @returns {object} 200 - 삭제 성공 { success: true, message: string, data: object }
+ * @returns {object} 500 - 서버 오류 { success: false, error: string }
+ */
+router.delete('/', async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+
+    // order_item_options 삭제 (CASCADE로 자동 삭제되지만 명시적으로 처리)
+    await client.query('DELETE FROM order_item_options');
+    
+    // order_items 삭제
+    await client.query('DELETE FROM order_items');
+    
+    // orders 삭제
+    const deleteResult = await client.query('DELETE FROM orders RETURNING id');
+    const deletedCount = deleteResult.rowCount;
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: '모든 주문이 삭제되었습니다.',
+      data: {
+        deletedCount
+      }
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting orders:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문 삭제 중 오류가 발생했습니다.'
+    });
+  } finally {
+    client.release();
+  }
+});
+
 export default router;

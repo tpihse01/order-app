@@ -23,7 +23,7 @@ import { menuAPI, orderAPI, authAPI, settingsAPI } from './api'
 import { logger } from './utils/logger'
 import { getErrorMessage } from './utils/errorHandler'
 import { updateStockAndMenus, decreaseStockBatch, resetAllStockToZero } from './utils/stockHelpers'
-import { validateOrder, validateNumber } from './utils/validators'
+import { validateOrder, validateNumber, validateString } from './utils/validators'
 import './App.css'
 
 function App() {
@@ -64,9 +64,11 @@ function App() {
   }, [])
 
   // useCallback으로 함수 메모이제이션하여 불필요한 재생성 방지
-  const loadOrders = useCallback(async () => {
+  const loadOrders = useCallback(async (showLoading = true) => {
     try {
-      setLoading(true)
+      if (showLoading) {
+        setLoading(true)
+      }
       // 모든 주문을 가져오기 위해 tab 파라미터 없이 호출
       const ordersData = await orderAPI.getOrders()
       // API 응답 형식을 프론트엔드 형식으로 변환
@@ -83,12 +85,41 @@ function App() {
           options: item.options || []
         }))
       }))
-      setOrders(formattedOrders)
+      
+      // 실제로 변경되었을 때만 상태 업데이트 (깜박임 방지)
+      setOrders(prevOrders => {
+        // 주문 개수가 다르면 변경된 것
+        if (prevOrders.length !== formattedOrders.length) {
+          return formattedOrders
+        }
+        
+        // 주문이 없으면 비교할 필요 없음
+        if (prevOrders.length === 0 && formattedOrders.length === 0) {
+          return prevOrders
+        }
+        
+        // 각 주문의 ID와 상태를 비교하여 변경사항 확인
+        // 주문 ID 문자열로 빠른 비교
+        const prevOrderIds = prevOrders.map(o => `${o.orderId}-${o.status}`).join(',')
+        const newOrderIds = formattedOrders.map(o => `${o.orderId}-${o.status}`).join(',')
+        
+        // 변경사항이 없으면 이전 상태 유지 (리렌더링 방지)
+        if (prevOrderIds === newOrderIds) {
+          return prevOrders
+        }
+        
+        return formattedOrders
+      })
     } catch (error) {
       logger.error('주문 로드 실패:', error)
-      setNotification({ message: '주문 목록을 불러오는 중 오류가 발생했습니다.', type: 'error' })
+      // 폴링 중 에러는 조용히 처리 (사용자에게 알림 표시하지 않음)
+      if (showLoading) {
+        setNotification({ message: '주문 목록을 불러오는 중 오류가 발생했습니다.', type: 'error' })
+      }
     } finally {
-      setLoading(false)
+      if (showLoading) {
+        setLoading(false)
+      }
     }
   }, [])
 
@@ -100,7 +131,7 @@ function App() {
   // 페이지 전환 시 데이터 로드
   useEffect(() => {
     if (currentPage === 'admin') {
-      loadOrders()
+      loadOrders(true) // 로딩 표시
       loadMenus() // 재고 정보도 함께 갱신
     }
     // 주문하기 화면으로 들어올 때마다 서버에서 최신 재고 반영
@@ -130,6 +161,27 @@ function App() {
       clearInterval(intervalId)
     }
   }, [currentPage, loadMenus])
+
+  // 관리자 화면이 활성화되어 있을 때 주기적으로 주문 목록 갱신 (다른 단말기에서 생성된 주문 반영)
+  useEffect(() => {
+    if (currentPage !== 'admin') {
+      return // 관리자 화면이 아니면 폴링 중지
+    }
+
+    // 즉시 한 번 로드 (로딩 표시)
+    loadOrders(true)
+
+    // 2초마다 주문 목록 갱신 (다른 단말기에서 생성된 주문을 실시간으로 반영)
+    // showLoading=false로 설정하여 깜박임 방지
+    const intervalId = setInterval(() => {
+      loadOrders(false)
+    }, 2000) // 2초 간격
+
+    // 컴포넌트 언마운트 또는 페이지 전환 시 인터벌 정리
+    return () => {
+      clearInterval(intervalId)
+    }
+  }, [currentPage, loadOrders])
 
   const handleStart = () => {
     setCurrentPage('order')
@@ -239,13 +291,19 @@ function App() {
       // stock과 menus 상태 일괄 업데이트
       decreaseStockBatch(setStock, setMenus, stockUpdates)
       
+      // 관리자 화면이 열려 있으면 주문 목록 즉시 갱신 (새 주문 반영)
+      // showLoading=false로 설정하여 깜박임 방지
+      if (currentPage === 'admin') {
+        loadOrders(false)
+      }
+      
       // 성공 반환 (알림은 OrderPage에서 표시)
       return { success: true }
     } catch (error) {
       // 에러는 OrderPage에서 처리하도록 throw
       throw error
     }
-  }, [])
+  }, [currentPage, loadOrders])
 
   // useCallback으로 함수 메모이제이션하여 불필요한 재생성 방지
   const updateOrderStatus = useCallback(async (orderId, newStatus) => {
@@ -357,6 +415,19 @@ function App() {
     }
   }, [])
 
+  // useCallback으로 함수 메모이제이션하여 불필요한 재생성 방지
+  const resetAllOrders = useCallback(async () => {
+    try {
+      await orderAPI.deleteAllOrders()
+      // 주문 목록 즉시 초기화
+      setOrders([])
+      
+      return { success: true }
+    } catch (error) {
+      throw error
+    }
+  }, [])
+
   return (
     <div className="app">
       {currentPage !== 'welcome' && (
@@ -379,6 +450,7 @@ function App() {
             onUpdateStock={updateStock}
             onResetAllStock={resetAllStock}
             onConfirmResetAllStock={confirmResetAllStock}
+            onResetAllOrders={resetAllOrders}
             loading={loading}
           />
         )}

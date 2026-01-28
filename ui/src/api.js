@@ -226,6 +226,21 @@ export const orderAPI = {
     });
     return response.data;
   },
+
+  /**
+   * 모든 주문 삭제
+   * 
+   * 모든 주문과 관련 데이터를 삭제합니다.
+   * 
+   * @returns {Promise<object>} 삭제 결과
+   * @throws {Error} API 호출 실패 시
+   */
+  deleteAllOrders: async () => {
+    const response = await apiRequest('/orders', {
+      method: 'DELETE',
+    });
+    return response.data;
+  },
 };
 
 /**

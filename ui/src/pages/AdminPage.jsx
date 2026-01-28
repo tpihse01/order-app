@@ -19,14 +19,16 @@ import Notification from '../components/Notification';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { formatPrice, formatDate, formatDateFull } from '../utils/formatters';
 import { getErrorMessage } from '../utils/errorHandler';
-import { findStockByProductId, formatOptionsToString } from '../utils/arrayHelpers';
+import { findStockByProductId } from '../utils/stockHelpers';
+import { formatOptionsToString } from '../utils/arrayHelpers';
 import { validateNumber } from '../utils/validators';
 
-function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock, onResetAllStock, onConfirmResetAllStock, loading = false }) {
+function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock, onResetAllStock, onConfirmResetAllStock, onResetAllOrders, loading = false }) {
   const [activeTab, setActiveTab] = useState('in-progress');
   const [editingStock, setEditingStock] = useState({});
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showResetSuccess, setShowResetSuccess] = useState(false);
+  const [showOrdersResetConfirm, setShowOrdersResetConfirm] = useState(false);
   const [notification, setNotification] = useState(null);
 
   // 주문 통계를 주문 목록에서 동적으로 계산
@@ -156,7 +158,16 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
   return (
     <div className="admin-page">
       <div className="dashboard-section">
-        <h2>관리자 대시보드</h2>
+        <div className="dashboard-section-header">
+          <h2>관리자 대시보드</h2>
+          <button 
+            className="reset-dashboard-btn"
+            onClick={() => setShowOrdersResetConfirm(true)}
+            aria-label="주문 현황 초기화"
+          >
+            주문 현황 초기화
+          </button>
+        </div>
         <div className="stats-summary">
           <div className="stat-card">
             <div className="stat-label">총 주문</div>
@@ -400,6 +411,49 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
           onClose={() => setShowResetSuccess(false)}
         />
       )}
+      {/* 주문 현황 초기화 확인 모달 */}
+      {showOrdersResetConfirm && (
+        <div className="reset-confirm-overlay" onClick={() => setShowOrdersResetConfirm(false)}>
+          <div className="reset-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="reset-confirm-header">
+              <h3>주문 현황 초기화 확인</h3>
+            </div>
+            <div className="reset-confirm-body">
+              <p>초기화 하시겠습니까?</p>
+              <p className="reset-confirm-warning">모든 주문 데이터가 삭제되며, 이 작업은 되돌릴 수 없습니다.</p>
+            </div>
+            <div className="reset-confirm-actions">
+              <button 
+                className="reset-confirm-cancel"
+                onClick={() => setShowOrdersResetConfirm(false)}
+              >
+                취소
+              </button>
+              <button 
+                className="reset-confirm-ok"
+                onClick={async () => {
+                  try {
+                    await onResetAllOrders();
+                    setShowOrdersResetConfirm(false);
+                    setNotification({ 
+                      message: '주문 현황이 초기화되었습니다.', 
+                      type: 'success' 
+                    });
+                  } catch (error) {
+                    setNotification({ 
+                      message: getErrorMessage(error, '주문 현황 초기화 중 오류가 발생했습니다.'), 
+                      type: 'error' 
+                    });
+                  }
+                }}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 범용 알림 */}
       {notification && (
         <Notification
