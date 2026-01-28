@@ -407,3 +407,617 @@
 - 제조 시작: received → in_progress (선택 사항: 별도 버튼 또는 자동 전환)
 - 제조 완료: in_progress → completed (선택 사항: 별도 버튼)
 - 주문 취소: 모든 상태 → cancelled (선택 사항)
+
+---
+
+## 6. 백엔드 개발 PRD
+
+### 6.1 데이터 모델
+
+#### 6.1.1 Menus (메뉴)
+메뉴 정보를 저장하는 테이블입니다.
+
+**필드:**
+- `id` (Primary Key, Auto Increment): 메뉴 고유 ID
+- `name` (VARCHAR, NOT NULL): 메뉴 이름 (예: "아메리카노(ICE)", "카페라떼")
+- `price` (INTEGER, NOT NULL): 기본 가격 (원 단위)
+- `description` (TEXT): 메뉴 설명
+- `image_url` (VARCHAR, NULLABLE): 이미지 URL 경로
+- `stock` (INTEGER, NOT NULL, DEFAULT 0): 재고 수량
+- `created_at` (TIMESTAMP, NOT NULL): 생성 일시 (UTC)
+- `updated_at` (TIMESTAMP, NOT NULL): 수정 일시 (UTC)
+
+**제약 조건:**
+- `price`는 0 이상의 값만 허용
+- `stock`은 0 이상의 값만 허용
+
+#### 6.1.2 Options (옵션)
+메뉴 옵션 정보를 저장하는 테이블입니다.
+
+**필드:**
+- `id` (Primary Key, Auto Increment): 옵션 고유 ID
+- `name` (VARCHAR, NOT NULL): 옵션 이름 (예: "샷 추가", "시럽 추가")
+- `additional_price` (INTEGER, NOT NULL, DEFAULT 0): 추가 가격 (원 단위)
+- `menu_id` (INTEGER, NOT NULL, Foreign Key → Menus.id): 연결된 메뉴 ID
+- `created_at` (TIMESTAMP, NOT NULL): 생성 일시 (UTC)
+- `updated_at` (TIMESTAMP, NOT NULL): 수정 일시 (UTC)
+
+**제약 조건:**
+- `additional_price`는 0 이상의 값만 허용
+- `menu_id`는 Menus 테이블에 존재하는 ID여야 함
+
+#### 6.1.3 Orders (주문)
+주문 정보를 저장하는 테이블입니다.
+
+**필드:**
+- `id` (Primary Key, Auto Increment): 주문 고유 ID
+- `order_time` (TIMESTAMP, NOT NULL): 주문 접수 일시 (UTC)
+- `status` (VARCHAR, NOT NULL, DEFAULT 'pending'): 주문 상태
+  - 가능한 값: 'pending' (주문 접수), 'in_progress' (제조 중), 'completed' (제조 완료)
+- `completed_time` (TIMESTAMP, NULLABLE): 제조 완료 일시 (UTC)
+- `total_amount` (INTEGER, NOT NULL): 주문 총 금액 (원 단위)
+- `created_at` (TIMESTAMP, NOT NULL): 생성 일시 (UTC)
+- `updated_at` (TIMESTAMP, NOT NULL): 수정 일시 (UTC)
+
+**제약 조건:**
+- `status`는 'pending', 'in_progress', 'completed' 중 하나여야 함
+- `total_amount`는 0 이상의 값만 허용
+- `completed_time`은 `status`가 'completed'일 때만 값이 있어야 함
+
+#### 6.1.4 OrderItems (주문 상세)
+주문에 포함된 메뉴와 옵션 정보를 저장하는 테이블입니다.
+
+**필드:**
+- `id` (Primary Key, Auto Increment): 주문 상세 고유 ID
+- `order_id` (INTEGER, NOT NULL, Foreign Key → Orders.id): 주문 ID
+- `menu_id` (INTEGER, NOT NULL, Foreign Key → Menus.id): 메뉴 ID
+- `quantity` (INTEGER, NOT NULL): 수량
+- `item_price` (INTEGER, NOT NULL): 해당 아이템의 총 가격 (메뉴 가격 + 옵션 가격) × 수량
+- `created_at` (TIMESTAMP, NOT NULL): 생성 일시 (UTC)
+
+**제약 조건:**
+- `quantity`는 1 이상의 값만 허용
+- `item_price`는 0 이상의 값만 허용
+
+#### 6.1.5 OrderItemOptions (주문 상세 옵션)
+주문 상세에 포함된 옵션 정보를 저장하는 테이블입니다.
+
+**필드:**
+- `id` (Primary Key, Auto Increment): 주문 상세 옵션 고유 ID
+- `order_item_id` (INTEGER, NOT NULL, Foreign Key → OrderItems.id): 주문 상세 ID
+- `option_id` (INTEGER, NOT NULL, Foreign Key → Options.id): 옵션 ID
+- `created_at` (TIMESTAMP, NOT NULL): 생성 일시 (UTC)
+
+#### 6.1.6 Settings (설정)
+시스템 설정 정보를 저장하는 테이블입니다.
+
+**필드:**
+- `id` (Primary Key, Auto Increment): 설정 고유 ID
+- `key` (VARCHAR, NOT NULL, UNIQUE): 설정 키 (예: 'admin_password')
+- `value` (TEXT, NOT NULL): 설정 값 (비밀번호의 경우 해시된 값)
+- `changed_at` (TIMESTAMP, NOT NULL): 변경 일시 (UTC)
+- `created_at` (TIMESTAMP, NOT NULL): 생성 일시 (UTC)
+- `updated_at` (TIMESTAMP, NOT NULL): 수정 일시 (UTC)
+
+**초기 데이터:**
+- `key`: 'admin_password'
+- `value`: '000000' (평문 저장 또는 해시)
+- `changed_at`: 초기 생성 시각
+
+**비밀번호 변경 이력:**
+- 비밀번호가 변경될 때마다 새로운 레코드가 추가됨 (누적 저장)
+- 가장 최근 `changed_at` 값을 가진 레코드가 현재 비밀번호
+
+### 6.2 데이터 스키마를 위한 사용자 흐름
+
+#### 6.2.1 메뉴 목록 조회 및 표시
+1. 사용자가 "시작하기" 또는 "주문하기" 버튼 클릭
+2. 프론트엔드에서 `GET /api/menus` API 호출
+3. 백엔드에서 Menus 테이블에서 모든 메뉴 조회
+4. 각 메뉴에 연결된 Options를 조회하여 함께 반환
+5. 프론트엔드에서 메뉴 목록을 화면에 표시
+6. 재고 수량(`stock`)은 관리자 화면에만 표시
+7. 주문하기 화면에서는 재고 수량에 따라:
+   - 재고가 0인 경우: "품절" 버튼 표시 및 비활성화
+   - 재고가 10 이하인 경우: "재고가 N개 남았습니다." 메시지 표시
+
+#### 6.2.2 장바구니에 메뉴 추가
+1. 사용자가 메뉴 카드에서 옵션 선택 (선택 사항)
+2. 사용자가 "담기" 버튼 클릭
+3. 프론트엔드에서 선택된 메뉴와 옵션 정보를 장바구니 상태에 추가
+4. 장바구니에 동일한 메뉴+옵션 조합이 있으면 수량 증가
+5. 장바구니 UI에 선택 정보 표시
+
+#### 6.2.3 주문 생성
+1. 사용자가 장바구니에서 "주문하기" 버튼 클릭
+2. 프론트엔드에서 `POST /api/orders` API 호출
+3. 요청 데이터:
+   ```json
+   {
+     "items": [
+       {
+         "menu_id": 1,
+         "quantity": 2,
+         "option_ids": [1, 2],
+         "item_price": 9000
+       }
+     ],
+     "total_amount": 9000
+   }
+   ```
+4. 백엔드에서:
+   - Orders 테이블에 주문 레코드 생성 (`order_time` = 현재 UTC 시각, `status` = 'pending')
+   - 각 아이템에 대해 OrderItems 레코드 생성
+   - 각 옵션에 대해 OrderItemOptions 레코드 생성
+   - 각 메뉴의 재고 수량 차감 (Menus 테이블의 `stock` 필드 업데이트)
+   - 재고 부족 시 오류 반환
+5. 생성된 주문 ID 반환
+6. 프론트엔드에서 장바구니 초기화 및 주문 완료 메시지 표시
+
+#### 6.2.4 주문 현황 조회 및 상태 변경
+1. 관리자가 관리자 화면 진입
+2. 프론트엔드에서 `GET /api/orders` API 호출
+3. 백엔드에서 Orders 테이블 조회:
+   - "진행 중" 탭: `status`가 'pending' 또는 'in_progress'인 주문
+   - "완료" 탭: `status`가 'completed'인 주문
+4. 각 주문의 OrderItems와 OrderItemOptions 조회하여 함께 반환
+5. 프론트엔드에서 주문 목록 표시
+6. 관리자가 "제조 시작" 버튼 클릭:
+   - 프론트엔드에서 `PATCH /api/orders/:orderId` API 호출
+   - 요청 데이터: `{ "status": "in_progress" }`
+   - 백엔드에서 Orders 테이블의 `status` 필드 업데이트
+7. 관리자가 "제조 완료" 버튼 클릭:
+   - 프론트엔드에서 `PATCH /api/orders/:orderId` API 호출
+   - 요청 데이터: `{ "status": "completed" }`
+   - 백엔드에서 Orders 테이블의 `status`를 'completed'로, `completed_time`을 현재 UTC 시각으로 업데이트
+8. 주문 목록 자동 갱신
+
+#### 6.2.5 재고 관리
+1. 관리자가 재고 현황 섹션에서 "+" 또는 "-" 버튼 클릭
+2. 프론트엔드에서 `PATCH /api/menus/:menuId/stock` API 호출
+3. 요청 데이터: `{ "change": 1 }` 또는 `{ "change": -1 }`
+4. 백엔드에서 Menus 테이블의 `stock` 필드 업데이트
+5. 업데이트된 재고 수량 반환
+6. 프론트엔드에서 재고 현황 UI 업데이트
+
+#### 6.2.6 관리자 비밀번호 인증
+1. 관리자가 "관리자" 버튼 클릭
+2. 프론트엔드에서 비밀번호 입력 모달 표시
+3. 사용자가 비밀번호 입력 후 확인 버튼 클릭
+4. 프론트엔드에서 `POST /api/auth/admin` API 호출
+5. 요청 데이터: `{ "password": "000000" }`
+6. 백엔드에서:
+   - Settings 테이블에서 `key`가 'admin_password'인 레코드 조회
+   - `changed_at`이 가장 최근인 레코드의 `value`와 비교
+   - 일치하면 인증 성공, 불일치하면 오류 반환
+7. 프론트엔드에서 인증 성공 시 관리자 화면 표시, 실패 시 오류 메시지 표시
+
+#### 6.2.7 관리자 비밀번호 변경
+1. 관리자가 관리자 화면에서 설정 아이콘 클릭
+2. 프론트엔드에서 비밀번호 변경 화면 표시
+3. 사용자가 이전 비밀번호, 새 비밀번호, 새 비밀번호 확인 입력
+4. 프론트엔드에서 `PATCH /api/settings/admin-password` API 호출
+5. 요청 데이터:
+   ```json
+   {
+     "old_password": "000000",
+     "new_password": "123456"
+   }
+   ```
+6. 백엔드에서:
+   - Settings 테이블에서 가장 최근 `changed_at`을 가진 'admin_password' 레코드 조회
+   - 이전 비밀번호 일치 확인
+   - 새 비밀번호를 Settings 테이블에 새 레코드로 추가 (`changed_at` = 현재 UTC 시각)
+7. 변경 완료 메시지 반환
+
+### 6.3 API 설계
+
+#### 6.3.1 메뉴 관련 API
+
+##### GET /api/menus
+메뉴 목록을 조회합니다.
+
+**요청:**
+- Method: GET
+- Headers: 없음
+- Body: 없음
+
+**응답:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "아메리카노(ICE)",
+      "price": 4000,
+      "description": "간단한 설명...",
+      "image_url": "https://images.unsplash.com/...",
+      "stock": 10,
+      "options": [
+        {
+          "id": 1,
+          "name": "샷 추가",
+          "additional_price": 500
+        },
+        {
+          "id": 2,
+          "name": "시럽 추가",
+          "additional_price": 0
+        }
+      ]
+    }
+  ]
+}
+```
+
+**에러 응답:**
+```json
+{
+  "success": false,
+  "error": "메뉴 조회 중 오류가 발생했습니다."
+}
+```
+
+##### GET /api/menus/:menuId
+특정 메뉴의 상세 정보를 조회합니다.
+
+**요청:**
+- Method: GET
+- Path Parameters:
+  - `menuId` (INTEGER): 메뉴 ID
+
+**응답:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "아메리카노(ICE)",
+    "price": 4000,
+    "description": "간단한 설명...",
+    "image_url": "https://images.unsplash.com/...",
+    "stock": 10,
+    "options": [...]
+  }
+}
+```
+
+##### PATCH /api/menus/:menuId/stock
+메뉴의 재고 수량을 변경합니다.
+
+**요청:**
+- Method: PATCH
+- Path Parameters:
+  - `menuId` (INTEGER): 메뉴 ID
+- Body:
+  ```json
+  {
+    "change": 1
+  }
+  ```
+  - `change` (INTEGER): 재고 변경량 (양수: 증가, 음수: 감소)
+
+**응답:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "stock": 11
+  }
+}
+```
+
+**에러 응답:**
+```json
+{
+  "success": false,
+  "error": "재고는 0 이상이어야 합니다."
+}
+```
+
+#### 6.3.2 주문 관련 API
+
+##### POST /api/orders
+새 주문을 생성합니다.
+
+**요청:**
+- Method: POST
+- Body:
+  ```json
+  {
+    "items": [
+      {
+        "menu_id": 1,
+        "quantity": 2,
+        "option_ids": [1, 2],
+        "item_price": 9000
+      }
+    ],
+    "total_amount": 9000
+  }
+  ```
+
+**응답:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "order_time": "2026-01-26T13:30:45.123Z",
+    "status": "pending",
+    "total_amount": 9000
+  }
+}
+```
+
+**에러 응답:**
+```json
+{
+  "success": false,
+  "error": "재고가 부족합니다: 아메리카노(ICE) (재고: 1개, 주문: 2개)"
+}
+```
+
+**비즈니스 로직:**
+1. 각 아이템의 메뉴 재고 확인
+2. 재고 부족 시 오류 반환
+3. Orders 테이블에 주문 레코드 생성 (`order_time` = 현재 UTC 시각)
+4. OrderItems 테이블에 주문 상세 레코드 생성
+5. OrderItemOptions 테이블에 옵션 레코드 생성
+6. Menus 테이블의 재고 수량 차감
+
+##### GET /api/orders
+주문 목록을 조회합니다.
+
+**요청:**
+- Method: GET
+- Query Parameters (선택):
+  - `status` (STRING): 주문 상태 필터 ('pending', 'in_progress', 'completed')
+  - `tab` (STRING): 탭 구분 ('in-progress', 'completed')
+
+**응답:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "order_time": "2026-01-26T13:30:45.123Z",
+      "completed_time": null,
+      "status": "pending",
+      "total_amount": 9000,
+      "items": [
+        {
+          "id": 1,
+          "menu_id": 1,
+          "menu_name": "아메리카노(ICE)",
+          "quantity": 2,
+          "item_price": 9000,
+          "options": [
+            {
+              "id": 1,
+              "name": "샷 추가",
+              "additional_price": 500
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**정렬:**
+- "진행 중" 탭: `order_time` 오름차순
+- "완료" 탭: `completed_time` 내림차순 (없으면 `order_time` 내림차순)
+
+##### GET /api/orders/:orderId
+특정 주문의 상세 정보를 조회합니다.
+
+**요청:**
+- Method: GET
+- Path Parameters:
+  - `orderId` (INTEGER): 주문 ID
+
+**응답:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "order_time": "2026-01-26T13:30:45.123Z",
+    "completed_time": "2026-01-26T13:35:20.456Z",
+    "status": "completed",
+    "total_amount": 9000,
+    "items": [...]
+  }
+}
+```
+
+##### PATCH /api/orders/:orderId
+주문 상태를 변경합니다.
+
+**요청:**
+- Method: PATCH
+- Path Parameters:
+  - `orderId` (INTEGER): 주문 ID
+- Body:
+  ```json
+  {
+    "status": "in_progress"
+  }
+  ```
+  또는
+  ```json
+  {
+    "status": "completed"
+  }
+  ```
+
+**응답:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "status": "in_progress",
+    "completed_time": null
+  }
+}
+```
+
+**비즈니스 로직:**
+- `status`가 'completed'로 변경될 때 `completed_time`을 현재 UTC 시각으로 설정
+- 상태 변경은 다음 순서만 허용:
+  - 'pending' → 'in_progress'
+  - 'in_progress' → 'completed'
+
+#### 6.3.3 인증 관련 API
+
+##### POST /api/auth/admin
+관리자 비밀번호 인증을 수행합니다.
+
+**요청:**
+- Method: POST
+- Body:
+  ```json
+  {
+    "password": "000000"
+  }
+  ```
+
+**응답:**
+```json
+{
+  "success": true,
+  "message": "인증 성공"
+}
+```
+
+**에러 응답:**
+```json
+{
+  "success": false,
+  "error": "비밀번호가 일치하지 않습니다."
+}
+```
+
+**비즈니스 로직:**
+1. Settings 테이블에서 `key` = 'admin_password'인 레코드 조회
+2. `changed_at`이 가장 최근인 레코드 선택
+3. 입력된 비밀번호와 `value` 비교
+4. 일치하면 성공, 불일치하면 오류
+
+#### 6.3.4 설정 관련 API
+
+##### PATCH /api/settings/admin-password
+관리자 비밀번호를 변경합니다.
+
+**요청:**
+- Method: PATCH
+- Body:
+  ```json
+  {
+    "old_password": "000000",
+    "new_password": "123456"
+  }
+  ```
+
+**응답:**
+```json
+{
+  "success": true,
+  "message": "비밀번호가 변경되었습니다.",
+  "data": {
+    "changed_at": "2026-01-26T14:00:00.000Z"
+  }
+}
+```
+
+**에러 응답:**
+```json
+{
+  "success": false,
+  "error": "이전 비밀번호가 일치하지 않습니다."
+}
+```
+
+또는
+
+```json
+{
+  "success": false,
+  "error": "새 비밀번호는 6자리여야 합니다."
+}
+```
+
+**비즈니스 로직:**
+1. Settings 테이블에서 가장 최근 `changed_at`을 가진 'admin_password' 레코드 조회
+2. 이전 비밀번호 일치 확인
+3. 새 비밀번호 유효성 검사 (6자리)
+4. 새 비밀번호를 Settings 테이블에 새 레코드로 추가 (`changed_at` = 현재 UTC 시각)
+5. 기존 레코드는 삭제하지 않고 유지 (이력 관리)
+
+### 6.4 시간대 처리
+
+#### 6.4.1 데이터베이스 저장
+- 모든 일시(`order_time`, `completed_time`, `changed_at` 등)는 **UTC (그리니치 천문대 시각)** 기준으로 저장
+- PostgreSQL의 `TIMESTAMP` 타입 사용 (또는 `TIMESTAMPTZ` 사용 권장)
+
+#### 6.4.2 프론트엔드 표시
+- API 응답에서 받은 UTC 시각을 클라이언트의 로컬 시간대로 변환하여 표시
+- JavaScript의 `Date` 객체를 사용하여 자동 변환
+- 표시 형식: "월 일 시:분:초" (예: "1월 26일 13:30:45")
+
+#### 6.4.3 예시
+- 데이터베이스 저장: `2026-01-26T04:30:45.123Z` (UTC)
+- 한국 시간대 표시: `2026-01-26T13:30:45` (UTC+9)
+- 화면 표시: "1월 26일 13:30:45"
+
+### 6.5 에러 처리
+
+#### 6.5.1 공통 에러 응답 형식
+```json
+{
+  "success": false,
+  "error": "에러 메시지",
+  "code": "ERROR_CODE" // 선택 사항
+}
+```
+
+#### 6.5.2 HTTP 상태 코드
+- `200 OK`: 성공
+- `400 Bad Request`: 잘못된 요청 (유효성 검사 실패)
+- `404 Not Found`: 리소스를 찾을 수 없음
+- `500 Internal Server Error`: 서버 내부 오류
+
+#### 6.5.3 주요 에러 케이스
+1. **재고 부족**: 주문 시 재고가 부족한 경우
+2. **존재하지 않는 메뉴**: 잘못된 메뉴 ID로 요청한 경우
+3. **존재하지 않는 주문**: 잘못된 주문 ID로 요청한 경우
+4. **비밀번호 불일치**: 관리자 인증 실패
+5. **유효하지 않은 상태 변경**: 허용되지 않은 주문 상태 전환
+
+### 6.6 데이터베이스 초기화
+
+#### 6.6.1 초기 데이터
+다음 데이터를 데이터베이스에 미리 삽입해야 합니다:
+
+**Menus:**
+- 아메리카노(ICE): 가격 4000원, 재고 10개
+- 아메리카노(HOT): 가격 4000원, 재고 15개
+- 카페라떼: 가격 5000원, 재고 8개
+- 카푸치노: 가격 5500원, 재고 3개
+- 바닐라라떼: 가격 6000원, 재고 0개
+- 카라멜마키아토: 가격 6500원, 재고 12개
+
+**Options:**
+- 각 메뉴에 "샷 추가" 옵션 (추가 가격 500원)
+- 각 메뉴에 "시럽 추가" 옵션 (추가 가격 0원)
+
+**Settings:**
+- `key`: 'admin_password'
+- `value`: '000000'
+- `changed_at`: 초기 생성 시각
