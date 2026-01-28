@@ -1,9 +1,26 @@
+/**
+ * 메뉴 관련 API 라우트
+ * 
+ * 메뉴 조회, 재고 관리 등의 엔드포인트를 제공합니다.
+ * 
+ * @module routes/menus
+ */
+
 import express from 'express';
 import pool from '../config/database.js';
 
 const router = express.Router();
 
-// GET /api/menus - 메뉴 목록 조회
+/**
+ * GET /api/menus
+ * 메뉴 목록 조회
+ * 
+ * 모든 메뉴와 옵션 정보를 조회합니다.
+ * 
+ * @route GET /api/menus
+ * @returns {object} 200 - 성공 응답 { success: true, data: Array<Menu> }
+ * @returns {object} 500 - 서버 오류 { success: false, error: string }
+ */
 router.get('/', async (req, res) => {
   try {
     // 메뉴와 옵션을 함께 조회

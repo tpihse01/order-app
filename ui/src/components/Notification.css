@@ -1,0 +1,86 @@
+/* 범용 알림 컴포넌트 스타일 */
+.notification {
+  position: fixed;
+  top: 42px; /* 네비게이션 바 높이 */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000; /* 최상단 레이어 */
+  animation: slideDown 0.3s ease-out;
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: 300px;
+  max-width: 90vw;
+  color: #ffffff;
+}
+
+/* 성공 알림 */
+.notification-success {
+  background-color: #4caf50;
+}
+
+/* 에러 알림 */
+.notification-error {
+  background-color: #f44336;
+}
+
+/* 경고 알림 */
+.notification-warning {
+  background-color: #ff9800;
+}
+
+/* 정보 알림 */
+.notification-info {
+  background-color: #2196f3;
+}
+
+.notification-icon {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.notification-message {
+  font-size: 1rem;
+  font-weight: 600;
+  flex: 1;
+}
+
+.notification-close {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.notification-close:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}

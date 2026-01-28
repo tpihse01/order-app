@@ -1,9 +1,31 @@
+/**
+ * 설정 관련 API 라우트
+ * 
+ * 앱 설정 관리 엔드포인트를 제공합니다.
+ * 
+ * @module routes/settings
+ */
+
 import express from 'express';
 import pool from '../config/database.js';
 
 const router = express.Router();
 
-// PATCH /api/settings/admin-password - 관리자 비밀번호 변경
+/**
+ * PATCH /api/settings/admin-password
+ * 관리자 비밀번호 변경
+ * 
+ * 관리자 비밀번호를 변경합니다. 새 비밀번호는 6자리여야 합니다.
+ * 
+ * @route PATCH /api/settings/admin-password
+ * @param {object} body - 요청 본문
+ * @param {string} body.old_password - 기존 비밀번호
+ * @param {string} body.new_password - 새 비밀번호 (6자리)
+ * @returns {object} 200 - 변경 성공 { success: true, message: string, data: object }
+ * @returns {object} 400 - 잘못된 요청 { success: false, error: string }
+ * @returns {object} 401 - 인증 실패 { success: false, error: string }
+ * @returns {object} 500 - 서버 오류 { success: false, error: string }
+ */
 router.patch('/admin-password', async (req, res) => {
   try {
     const { old_password, new_password } = req.body;

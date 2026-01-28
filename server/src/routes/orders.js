@@ -1,9 +1,28 @@
+/**
+ * 주문 관련 API 라우트
+ * 
+ * 주문 생성, 조회, 상태 변경 등의 엔드포인트를 제공합니다.
+ * 
+ * @module routes/orders
+ */
+
 import express from 'express';
 import pool from '../config/database.js';
 
 const router = express.Router();
 
-// GET /api/orders - 주문 목록 조회
+/**
+ * GET /api/orders
+ * 주문 목록 조회
+ * 
+ * 주문 목록을 조회합니다. 쿼리 파라미터로 필터링 가능합니다.
+ * 
+ * @route GET /api/orders
+ * @param {string} [query.status] - 주문 상태 필터 ('pending', 'in_progress', 'completed')
+ * @param {string} [query.tab] - 탭 필터 ('in-progress', 'completed')
+ * @returns {object} 200 - 성공 응답 { success: true, data: Array<Order> }
+ * @returns {object} 500 - 서버 오류 { success: false, error: string }
+ */
 router.get('/', async (req, res) => {
   try {
     const { status, tab } = req.query;

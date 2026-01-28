@@ -1,11 +1,33 @@
-import { useState, useMemo } from 'react';
+/**
+ * 관리자 페이지 컴포넌트
+ * 
+ * 주문 현황 대시보드, 재고 관리, 주문 상태 변경을 담당합니다.
+ * 
+ * @component
+ * @param {object} props - 컴포넌트 props
+ * @param {Array} [props.orders=[]] - 주문 배열
+ * @param {Function} props.onUpdateOrderStatus - 주문 상태 변경 콜백 함수
+ * @param {Array} [props.stock=[]] - 재고 정보 배열
+ * @param {Function} props.onUpdateStock - 재고 업데이트 콜백 함수
+ * @param {Function} props.onResetAllStock - 모든 재고 초기화 콜백 함수
+ * @param {Function} props.onConfirmResetAllStock - 재고 초기화 확인 콜백 함수
+ * @param {boolean} [props.loading=false] - 로딩 상태
+ */
+import { useState, useMemo, useCallback } from 'react';
 import './AdminPage.css';
+import Notification from '../components/Notification';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { formatPrice, formatDate, formatDateFull } from '../utils/formatters';
+import { getErrorMessage } from '../utils/errorHandler';
+import { findStockByProductId, formatOptionsToString } from '../utils/arrayHelpers';
+import { validateNumber } from '../utils/validators';
 
 function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock, onResetAllStock, onConfirmResetAllStock, loading = false }) {
   const [activeTab, setActiveTab] = useState('in-progress');
   const [editingStock, setEditingStock] = useState({});
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showResetSuccess, setShowResetSuccess] = useState(false);
+  const [notification, setNotification] = useState(null);
 
   // 주문 통계를 주문 목록에서 동적으로 계산
   const orderStats = useMemo(() => {
@@ -17,32 +39,38 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
     };
   }, [orders]);
 
-  const updateStock = async (productId, change, stockValue) => {
+  // useCallback으로 함수 메모이제이션하여 불필요한 재생성 방지
+  const updateStock = useCallback(async (productId, change, stockValue) => {
     if (onUpdateStock) {
       await onUpdateStock(productId, change, stockValue);
     }
-  };
+  }, [onUpdateStock]);
 
   const handleStockInputChange = (productId, value) => {
-    const numValue = parseInt(value, 10);
-    if (!isNaN(numValue) && numValue >= 0) {
-      setEditingStock(prev => ({
-        ...prev,
-        [productId]: numValue
-      }));
-    } else if (value === '') {
+    // 입력값 검증
+    if (value === '') {
       setEditingStock(prev => ({
         ...prev,
         [productId]: ''
       }));
+      return;
     }
+
+    const validation = validateNumber(value, '재고', { min: 0, required: false });
+    if (validation.isValid && validation.value !== undefined) {
+      setEditingStock(prev => ({
+        ...prev,
+        [productId]: validation.value
+      }));
+    }
+    // 유효하지 않은 값은 무시 (입력 중일 수 있음)
   };
 
   const handleStockInputBlur = async (productId) => {
     const stockItem = stock.find(s => s.productId === productId);
     const inputValue = editingStock[productId];
     
-    if (inputValue !== undefined && inputValue !== stockItem.stock) {
+    if (inputValue !== undefined && inputValue !== currentStock) {
       if (inputValue >= 0) {
         await updateStock(productId, undefined, inputValue);
       }
@@ -110,19 +138,6 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
     }
   };
 
-  const formatDate = (date) => {
-    if (!date || !(date instanceof Date)) {
-      return '날짜 없음';
-    }
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const seconds = date.getSeconds().toString().padStart(2, '0');
-    return `${month}월 ${day}일 ${hours}:${minutes}:${seconds}`;
-  };
-
-  const formatDateFull = formatDate; // 중복 제거
 
   // 진행 중 주문 (pending, in_progress) - 주문 접수 시각 오름차순
   const inProgressOrders = orders
@@ -137,10 +152,6 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
       const bCompletedTime = b.completedTime || b.orderTime;
       return new Date(bCompletedTime) - new Date(aCompletedTime);
     });
-
-  const formatPrice = (price) => {
-    return price.toLocaleString('ko-KR') + '원';
-  };
 
   return (
     <div className="admin-page">
@@ -244,7 +255,7 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
         {activeTab === 'in-progress' && (
           <>
             {loading ? (
-              <p className="empty-orders">주문 목록을 불러오는 중...</p>
+              <LoadingSpinner message="주문 목록을 불러오는 중..." />
             ) : inProgressOrders.length === 0 ? (
               <p className="empty-orders">진행 중인 주문이 없습니다.</p>
             ) : (
@@ -265,7 +276,7 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
                           <span className="order-item-name">
                             {item.productName} x {item.quantity}
                             {item.options && item.options.length > 0 && 
-                              ` (${item.options.map(opt => opt.optionName || opt.name).join(', ')})`
+                              ` (${formatOptionsToString(item.options, 'optionName')})`
                             }
                           </span>
                           <span className="order-item-price">{formatPrice(item.price)}</span>
@@ -293,7 +304,7 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
         {activeTab === 'completed' && (
           <>
             {loading ? (
-              <p className="empty-orders">주문 목록을 불러오는 중...</p>
+              <LoadingSpinner message="주문 목록을 불러오는 중..." />
             ) : completedOrders.length === 0 ? (
               <p className="empty-orders">완료된 주문이 없습니다.</p>
             ) : (
@@ -315,7 +326,7 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
                           <span className="order-item-name">
                             {item.productName} x {item.quantity}
                             {item.options && item.options.length > 0 && 
-                              ` (${item.options.map(opt => opt.optionName || opt.name).join(', ')})`
+                              ` (${formatOptionsToString(item.options, 'optionName')})`
                             }
                           </span>
                           <span className="order-item-price">{formatPrice(item.price)}</span>
@@ -367,7 +378,10 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
                       setShowResetSuccess(false);
                     }, 3000);
                   } catch (error) {
-                    alert(error.message || '재고 초기화 중 오류가 발생했습니다.');
+                    setNotification({ 
+                      message: getErrorMessage(error, '재고 초기화 중 오류가 발생했습니다.'), 
+                      type: 'error' 
+                    });
                   }
                 }}
               >
@@ -380,19 +394,19 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
 
       {/* 재고 초기화 성공 알림 */}
       {showResetSuccess && (
-        <div className="reset-success-notification">
-          <div className="reset-success-content">
-            <span className="reset-success-icon">✓</span>
-            <span className="reset-success-message">모든 재고가 0으로 초기화되었습니다.</span>
-            <button 
-              className="reset-success-close"
-              onClick={() => setShowResetSuccess(false)}
-              aria-label="닫기"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
+        <Notification
+          message="모든 재고가 0으로 초기화되었습니다."
+          type="success"
+          onClose={() => setShowResetSuccess(false)}
+        />
+      )}
+      {/* 범용 알림 */}
+      {notification && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
       )}
     </div>
   );

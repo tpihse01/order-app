@@ -1,3 +1,17 @@
+/**
+ * Express 서버 진입점
+ * 
+ * 커피 주문 앱의 백엔드 서버를 설정하고 실행합니다.
+ * 
+ * 주요 기능:
+ * - Express 앱 설정 및 미들웨어 구성
+ * - API 라우트 등록
+ * - 에러 핸들링
+ * - 서버 시작
+ * 
+ * @module server
+ */
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';

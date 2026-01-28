@@ -1,9 +1,30 @@
+/**
+ * 인증 관련 API 라우트
+ * 
+ * 관리자 인증 등의 엔드포인트를 제공합니다.
+ * 
+ * @module routes/auth
+ */
+
 import express from 'express';
 import pool from '../config/database.js';
 
 const router = express.Router();
 
-// POST /api/auth/admin - 관리자 비밀번호 인증
+/**
+ * POST /api/auth/admin
+ * 관리자 비밀번호 인증
+ * 
+ * 관리자 비밀번호를 확인합니다.
+ * 
+ * @route POST /api/auth/admin
+ * @param {object} body - 요청 본문
+ * @param {string} body.password - 관리자 비밀번호
+ * @returns {object} 200 - 인증 성공 { success: true, message: string }
+ * @returns {object} 400 - 잘못된 요청 { success: false, error: string }
+ * @returns {object} 401 - 인증 실패 { success: false, error: string }
+ * @returns {object} 500 - 서버 오류 { success: false, error: string }
+ */
 router.post('/admin', async (req, res) => {
   try {
     const { password } = req.body;
