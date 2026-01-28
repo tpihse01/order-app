@@ -57,6 +57,31 @@ function App() {
   }
 
   const addOrder = (cartItems, totalAmount) => {
+    // 재고 확인 및 차감
+    const stockUpdates = {};
+    for (const item of cartItems) {
+      const stockItem = stock.find(s => s.productId === item.productId);
+      if (!stockItem) {
+        alert(`상품 정보를 찾을 수 없습니다: ${item.productName}`);
+        return;
+      }
+      if (stockItem.stock < item.quantity) {
+        alert(`재고가 부족합니다: ${item.productName} (재고: ${stockItem.stock}개, 주문: ${item.quantity}개)`);
+        return;
+      }
+      stockUpdates[item.productId] = (stockUpdates[item.productId] || 0) + item.quantity;
+    }
+
+    // 재고 차감
+    setStock(prevStock => 
+      prevStock.map(item => {
+        if (stockUpdates[item.productId]) {
+          return { ...item, stock: item.stock - stockUpdates[item.productId] };
+        }
+        return item;
+      })
+    );
+
     const newOrder = {
       orderId: nextOrderId,
       orderTime: new Date(),

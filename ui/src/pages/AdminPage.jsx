@@ -71,6 +71,9 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
   };
 
   const formatDate = (date) => {
+    if (!date || !(date instanceof Date)) {
+      return '날짜 없음';
+    }
     const month = date.getMonth() + 1;
     const day = date.getDate();
     const hours = date.getHours();
@@ -79,14 +82,7 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
     return `${month}월 ${day}일 ${hours}:${minutes}:${seconds}`;
   };
 
-  const formatDateFull = (date) => {
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const seconds = date.getSeconds().toString().padStart(2, '0');
-    return `${month}월 ${day}일 ${hours}:${minutes}:${seconds}`;
-  };
+  const formatDateFull = formatDate; // 중복 제거
 
   // 진행 중 주문 (pending, in_progress) - 주문 접수 시각 오름차순
   const inProgressOrders = orders

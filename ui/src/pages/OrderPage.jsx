@@ -94,6 +94,13 @@ function OrderPage({ onOrder, stock = [] }) {
   };
 
   const addToCart = (product) => {
+    const productStock = getProductStock(product.id);
+    
+    if (productStock === 0) {
+      alert('품절된 상품입니다.');
+      return;
+    }
+
     const selectedProductOptions = (selectedOptions[product.id] || [])
       .map(optionId => product.options.find(opt => opt.id === optionId))
       .filter(Boolean);
@@ -116,7 +123,14 @@ function OrderPage({ onOrder, stock = [] }) {
 
     if (existingItemIndex >= 0) {
       const updatedCart = [...cart];
-      updatedCart[existingItemIndex].quantity += 1;
+      const newQuantity = updatedCart[existingItemIndex].quantity + 1;
+      
+      if (newQuantity > productStock) {
+        alert(`재고가 부족합니다. (현재 재고: ${productStock}개)`);
+        return;
+      }
+      
+      updatedCart[existingItemIndex].quantity = newQuantity;
       updatedCart[existingItemIndex].totalPrice = 
         updatedCart[existingItemIndex].basePrice * updatedCart[existingItemIndex].quantity +
         updatedCart[existingItemIndex].selectedOptions.reduce((sum, opt) => 
@@ -136,11 +150,17 @@ function OrderPage({ onOrder, stock = [] }) {
 
   const updateCartItemQuantity = (index, change) => {
     const updatedCart = [...cart];
-    const newQuantity = updatedCart[index].quantity + change;
+    const item = updatedCart[index];
+    const productStock = getProductStock(item.productId);
+    const newQuantity = item.quantity + change;
     
     if (newQuantity <= 0) {
       // 수량이 0 이하가 되면 아이템 삭제
       updatedCart.splice(index, 1);
+    } else if (change > 0 && newQuantity > productStock) {
+      // 재고보다 많이 담으려고 하면 경고
+      alert(`재고가 부족합니다. (현재 재고: ${productStock}개)`);
+      return;
     } else {
       updatedCart[index].quantity = newQuantity;
       updatedCart[index].totalPrice = 
@@ -255,8 +275,10 @@ function OrderPage({ onOrder, stock = [] }) {
         ) : (
           <>
             <div className="cart-items-scrollable">
-              {cart.map((item, index) => (
-                <div key={index} className="cart-item">
+              {cart.map((item, index) => {
+                const uniqueKey = `${item.productId}-${item.selectedOptions.map(o => o.id).sort().join('-')}-${index}`;
+                return (
+                <div key={uniqueKey} className="cart-item">
                   <div className="cart-item-info">
                     <span className="cart-item-name">
                       {item.productName}
@@ -291,7 +313,8 @@ function OrderPage({ onOrder, stock = [] }) {
                     ✕
                   </button>
                 </div>
-              ))}
+              );
+              })}
             </div>
             <div className="cart-footer">
               <div className="cart-total">
