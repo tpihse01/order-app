@@ -12,7 +12,8 @@ import { getErrorMessage, getHttpErrorMessage, classifyError } from './utils/err
 import { validateMenu, validateOrder } from './utils/validators.js';
 
 // API 기본 URL
-const API_BASE_URL = 'http://localhost:3001/api';
+// 환경 변수에서 가져오거나 기본값 사용 (개발 환경)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // 개발 환경에서만 로그를 출력하는 유틸리티
 const isDevelopment = import.meta.env.DEV;

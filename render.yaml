@@ -1,0 +1,51 @@
+# Render.com 배포 설정 파일 (선택사항)
+# 이 파일을 사용하면 Render 대시보드에서 수동 설정 대신 자동으로 서비스를 생성할 수 있습니다.
+
+services:
+  # 백엔드 서버
+  - type: web
+    name: order-app-server
+    env: node
+    region: singapore  # 또는 가장 가까운 지역 선택
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    rootDir: server
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # 데이터베이스 환경 변수는 Render 대시보드에서 직접 설정하거나
+      # PostgreSQL 서비스의 Internal Database URL을 사용하세요
+      - key: DB_HOST
+        sync: false  # 수동으로 설정 필요
+      - key: DB_PORT
+        value: 5432
+      - key: DB_NAME
+        sync: false  # 수동으로 설정 필요
+      - key: DB_USER
+        sync: false  # 수동으로 설정 필요
+      - key: DB_PASSWORD
+        sync: false  # 수동으로 설정 필요
+
+  # 프론트엔드 Static Site
+  - type: web
+    name: order-app-ui
+    env: static
+    region: singapore
+    plan: free
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    rootDir: ui
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false  # 백엔드 서비스 URL로 설정 필요
+
+databases:
+  # PostgreSQL 데이터베이스
+  - name: order-app-db
+    databaseName: order_app
+    user: order_app_user
+    plan: free
+    region: singapore
