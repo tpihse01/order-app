@@ -68,26 +68,89 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
     // 유효하지 않은 값은 무시 (입력 중일 수 있음)
   };
 
-  const handleStockInputBlur = async (productId) => {
+  /** - 버튼 클릭: 로컬 상태만 업데이트 (서버 반영은 재고 반영 버튼 클릭 시) */
+  const handleStockDecrease = (productId) => {
     const stockItem = stock.find(s => s.productId === productId);
-    const inputValue = editingStock[productId];
+    const currentStock = stockItem != null ? stockItem.stock : 0;
+    const editingValue = editingStock[productId];
+    const currentDisplayValue = editingValue !== undefined ? editingValue : currentStock;
+    const newValue = Math.max(0, currentDisplayValue - 1);
     
-    if (inputValue !== undefined && inputValue !== currentStock) {
-      if (inputValue >= 0) {
-        await updateStock(productId, undefined, inputValue);
-      }
-    }
-    setEditingStock(prev => {
-      const newState = { ...prev };
-      delete newState[productId];
-      return newState;
-    });
+    setEditingStock(prev => ({
+      ...prev,
+      [productId]: newValue
+    }));
   };
 
-  const handleStockInputKeyPress = async (e, productId) => {
-    if (e.key === 'Enter') {
-      await handleStockInputBlur(productId);
+  /** + 버튼 클릭: 로컬 상태만 업데이트 (서버 반영은 재고 반영 버튼 클릭 시) */
+  const handleStockIncrease = (productId) => {
+    const stockItem = stock.find(s => s.productId === productId);
+    const currentStock = stockItem != null ? stockItem.stock : 0;
+    const editingValue = editingStock[productId];
+    const currentDisplayValue = editingValue !== undefined ? editingValue : currentStock;
+    const newValue = currentDisplayValue + 1;
+    
+    setEditingStock(prev => ({
+      ...prev,
+      [productId]: newValue
+    }));
+  };
+
+  /** 직접 입력한 재고 값을 서버에 반영 (재고 반영 버튼 클릭 시에만) */
+  const applyStockInput = useCallback(async (productId) => {
+    const stockItem = stock.find(s => s.productId === productId);
+    const currentStock = stockItem != null ? stockItem.stock : 0;
+    const rawValue = editingStock[productId];
+    const numValue = rawValue === '' || rawValue === undefined
+      ? currentStock
+      : Number(rawValue);
+
+    if (Number.isNaN(numValue) || numValue < 0) {
+      setEditingStock(prev => {
+        const next = { ...prev };
+        delete next[productId];
+        return next;
+      });
+      return;
     }
+    if (numValue === currentStock) {
+      setEditingStock(prev => {
+        const next = { ...prev };
+        delete next[productId];
+        return next;
+      });
+      return;
+    }
+    try {
+      await updateStock(productId, undefined, numValue);
+      // 재고 반영 성공 알림
+      const productName = stockItem?.productName || '상품';
+      setNotification({
+        type: 'success',
+        message: `변경된 재고 수량이 반영되었습니다. (${productName}: ${currentStock} → ${numValue})`
+      });
+    } catch (error) {
+      // 에러 알림
+      setNotification({
+        type: 'error',
+        message: getErrorMessage(error)
+      });
+    } finally {
+      setEditingStock(prev => {
+        const next = { ...prev };
+        delete next[productId];
+        return next;
+      });
+    }
+  }, [stock, editingStock, updateStock]);
+
+  const handleStockInputBlur = () => {
+    /* blur 시에는 서버 반영하지 않음. 재고 반영 버튼 클릭 시에만 반영 */
+  };
+
+  const handleStockInputKeyPress = (e) => {
+    if (e.key === 'Enter') e.preventDefault();
+    /* Enter 시에도 서버 반영하지 않음. 재고 반영 버튼 클릭 시에만 반영 */
   };
 
   const getStockStatus = (stockCount) => {
@@ -201,7 +264,7 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
         </div>
         <div className="stock-grid">
           {stock.map(item => {
-            const displayStock = editingStock[item.productId] !== undefined 
+            const displayStock = editingStock[item.productId] !== undefined && editingStock[item.productId] !== ''
               ? editingStock[item.productId] 
               : item.stock;
             
@@ -218,7 +281,7 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
                 <div className="stock-controls">
                   <button 
                     className="stock-btn decrease"
-                    onClick={() => updateStock(item.productId, -1)}
+                    onClick={() => handleStockDecrease(item.productId)}
                     aria-label="재고 감소"
                   >
                     -
@@ -235,10 +298,18 @@ function AdminPage({ orders = [], onUpdateOrderStatus, stock = [], onUpdateStock
                   />
                   <button 
                     className="stock-btn increase"
-                    onClick={() => updateStock(item.productId, 1)}
+                    onClick={() => handleStockIncrease(item.productId)}
                     aria-label="재고 증가"
                   >
                     +
+                  </button>
+                  <button
+                    type="button"
+                    className="stock-apply-btn"
+                    onClick={() => applyStockInput(item.productId)}
+                    aria-label="재고 반영"
+                  >
+                    재고 반영
                   </button>
                 </div>
               </div>

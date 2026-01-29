@@ -1,0 +1,35 @@
+# ==============================
+# 프로젝트 루트 .gitignore
+# ==============================
+
+# 환경 변수 (루트에 둔 경우)
+.env
+.env.local
+.env.*.local
+
+# 로그
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+.DS_Store?
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 임시/백업
+*.tmp
+*.temp
+*.bak
+*.backup

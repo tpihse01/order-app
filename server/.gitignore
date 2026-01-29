@@ -1,84 +1,68 @@
+# ==============================
+# 서버 (Node.js / Express)
+# ==============================
+
 # Dependencies
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 .pnp
 .pnp.js
 
-# Environment variables
+# 환경 변수 (비밀정보 포함)
 .env
-.env.*
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 .env.backup
-# .env.example은 템플릿이므로 커밋 가능 (필요시 주석 해제)
-# .env.example
+# .env.example 은 템플릿이므로 커밋 가능
 
-# Logs
+# 로그
 logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
-*.log.*
 
-# Runtime data
-pids/
-*.pid
-*.seed
-*.pid.lock
+# 빌드/출력
+dist/
+build/
+*.tsbuildinfo
 
-# Coverage directory used by tools like istanbul
+# 테스트/커버리지
 coverage/
 *.lcov
 .nyc_output/
 
-# ESLint cache
+# 캐시
 .eslintcache
-
-# Optional npm cache directory
 .npm
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# parcel-bundler cache
 .cache
 .parcel-cache
 
-# Next.js (if used in future)
-.next/
-out/
+# 런타임
+pids/
+*.pid
+*.seed
+*.pid.lock
+.node_repl_history
 
-# Nuxt.js (if used in future)
-.nuxt/
-dist/
+# 패키지 출력
+*.tgz
+.yarn-integrity
 
-# Build outputs
-build/
-dist/
-*.tsbuildinfo
+# DB 파일 (로컬 SQLite 등)
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+
+# PM2
+.pm2/
 
 # OS
 .DS_Store
 .DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 Desktop.ini
 $RECYCLE.BIN/
@@ -95,27 +79,11 @@ $RECYCLE.BIN/
 *.sublime-project
 *.sublime-workspace
 
-# Temporary files
+# 임시/백업
 *.tmp
 *.temp
 .tmp/
 .temp/
-
-# Database
-*.sqlite
-*.sqlite3
-*.db
-*.db-journal
-
-# PM2
-.pm2/
-ecosystem.config.js
-
-# Docker
-.dockerignore
-docker-compose.override.yml
-
-# Misc
 *.bak
 *.backup
 *.old

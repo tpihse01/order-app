@@ -25,6 +25,9 @@ const logger = {
   }
 };
 
+// 프로덕션(배포) 환경에서는 백엔드 콜드 스타트 대기 (Render 무료 플랜: 최대 약 60초)
+const API_TIMEOUT_MS = import.meta.env.DEV ? 15000 : 70000;
+
 /**
  * 공통 API 요청 함수
  * 
@@ -37,14 +40,19 @@ const logger = {
  * @throws {Error} 네트워크 오류 또는 HTTP 오류
  */
 async function apiRequest(endpoint, options = {}) {
+  const controller = new AbortController();
+  let timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
       ...options,
     });
+    clearTimeout(timeoutId);
 
     // 응답이 JSON이 아닐 수 있으므로 확인
     let data;
@@ -80,13 +88,22 @@ async function apiRequest(endpoint, options = {}) {
 
     return data;
   } catch (error) {
+    clearTimeout(timeoutId);
     logger.error('API 요청 오류:', error);
-    
+
+    // 타임아웃(콜드 스타트) 시 사용자 안내
+    if (error.name === 'AbortError') {
+      const coldStartMessage = import.meta.env.DEV
+        ? '요청 시간이 초과되었습니다.'
+        : '서버가 시작 중일 수 있습니다. 무료 플랜은 최대 1분 정도 걸릴 수 있으니 잠시 후 다시 시도해 주세요.';
+      throw new Error(coldStartMessage);
+    }
+
     // 이미 처리된 에러는 그대로 throw
     if (error.status) {
       throw error;
     }
-    
+
     // 네트워크 오류 처리
     if (error.name === 'TypeError' && (error.message.includes('fetch') || error.message.includes('Failed to fetch'))) {
       const networkError = new Error('서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');

@@ -27,6 +27,9 @@ function OrderPage({ onOrder, stock = [], menus = [], stockUpdateKey = 0, loadin
   const [products, setProducts] = useState([]);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [isCartOpen, setIsCartOpen] = useState(false); // 모바일 장바구니 열림/닫힘 상태
+  const [touchStartY, setTouchStartY] = useState(null);
+  const [touchCurrentY, setTouchCurrentY] = useState(null);
 
   // menus와 stock prop이 변경되면 products로 변환 (재고 정보 포함)
   // useMemo로 최적화하여 불필요한 재계산 방지
@@ -187,6 +190,41 @@ function OrderPage({ onOrder, stock = [], menus = [], stockUpdateKey = 0, loadin
     return cart.reduce((sum, item) => sum + item.totalPrice, 0);
   }, [cart]);
 
+  // 모바일 장바구니 스와이프 핸들러
+  const handleTouchStart = (e) => {
+    setTouchStartY(e.touches[0].clientY);
+    setTouchCurrentY(e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchCurrentY(e.touches[0].clientY);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartY === null || touchCurrentY === null) return;
+
+    const deltaY = touchStartY - touchCurrentY;
+    const threshold = 50; // 스와이프 임계값 (50px)
+
+    if (Math.abs(deltaY) > threshold) {
+      if (deltaY > 0) {
+        // 아래로 스와이프 (열기)
+        setIsCartOpen(true);
+      } else {
+        // 위로 스와이프 (닫기)
+        setIsCartOpen(false);
+      }
+    }
+
+    setTouchStartY(null);
+    setTouchCurrentY(null);
+  };
+
+  // 장바구니 토글 버튼 핸들러
+  const toggleCart = () => {
+    setIsCartOpen(prev => !prev);
+  };
+
   const handleOrder = async () => {
     if (cart.length === 0) return;
     
@@ -304,8 +342,29 @@ function OrderPage({ onOrder, stock = [], menus = [], stockUpdateKey = 0, loadin
         )}
       </div>
 
-      <div className="cart-section">
-        <h2 className="cart-title">장바구니</h2>
+      <div 
+        className={`cart-section ${isCartOpen ? 'cart-open' : 'cart-closed'}`}
+      >
+        <div 
+          className="cart-header" 
+          onClick={toggleCart} 
+          style={{ cursor: 'pointer' }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <h2 className="cart-title">장바구니</h2>
+          <button 
+            className="cart-toggle-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleCart();
+            }}
+            aria-label={isCartOpen ? '장바구니 숨기기' : '장바구니 보이기'}
+          >
+            {isCartOpen ? '▼' : '▲'}
+          </button>
+        </div>
         {cart.length === 0 ? (
           <p className="empty-cart">
             장바구니가<br />비어있습니다

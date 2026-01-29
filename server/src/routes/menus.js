@@ -158,14 +158,15 @@ router.patch('/:menuId/stock', async (req, res) => {
     let finalStock;
     
     if (newStockValue !== undefined) {
-      // 직접 재고 값 설정
-      if (typeof newStockValue !== 'number' || newStockValue < 0) {
+      // 직접 재고 값 설정 (number 또는 문자열 숫자 허용)
+      const parsed = typeof newStockValue === 'string' ? parseInt(newStockValue, 10) : Number(newStockValue);
+      if (Number.isNaN(parsed) || parsed < 0) {
         return res.status(400).json({
           success: false,
           error: '재고는 0 이상의 숫자여야 합니다.'
         });
       }
-      finalStock = newStockValue;
+      finalStock = parsed;
     } else if (change !== undefined) {
       // 재고 변경량으로 계산
       if (typeof change !== 'number') {
