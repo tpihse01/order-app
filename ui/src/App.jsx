@@ -162,7 +162,7 @@ function App() {
     }
   }, [currentPage, loadMenus])
 
-  // 관리자 화면이 활성화되어 있을 때 주기적으로 주문 목록 갱신 (다른 단말기에서 생성된 주문 반영)
+  // 관리자 화면이 활성화되어 있을 때 주기적으로 주문 목록·재고 갱신 (주문/재고 변경 실시간 반영)
   useEffect(() => {
     if (currentPage !== 'admin') {
       return // 관리자 화면이 아니면 폴링 중지
@@ -170,18 +170,19 @@ function App() {
 
     // 즉시 한 번 로드 (로딩 표시)
     loadOrders(true)
+    loadMenus() // 재고 현황도 최신으로
 
-    // 2초마다 주문 목록 갱신 (다른 단말기에서 생성된 주문을 실시간으로 반영)
-    // showLoading=false로 설정하여 깜박임 방지
+    // 2초마다 주문 목록·재고 갱신 (주문하기에서 주문 시 관리자 재고 현황에 새로고침 없이 반영)
     const intervalId = setInterval(() => {
       loadOrders(false)
+      loadMenus() // 재고(메뉴) 갱신
     }, 2000) // 2초 간격
 
     // 컴포넌트 언마운트 또는 페이지 전환 시 인터벌 정리
     return () => {
       clearInterval(intervalId)
     }
-  }, [currentPage, loadOrders])
+  }, [currentPage, loadOrders, loadMenus])
 
   const handleStart = () => {
     setCurrentPage('order')
@@ -291,10 +292,10 @@ function App() {
       // stock과 menus 상태 일괄 업데이트
       decreaseStockBatch(setStock, setMenus, stockUpdates)
       
-      // 관리자 화면이 열려 있으면 주문 목록 즉시 갱신 (새 주문 반영)
-      // showLoading=false로 설정하여 깜박임 방지
+      // 관리자 화면이 열려 있으면 주문 목록·재고 즉시 갱신 (새 주문 반영, 재고 현황 반영)
       if (currentPage === 'admin') {
         loadOrders(false)
+        loadMenus() // 재고 현황에 주문 반영 반영
       }
       
       // 성공 반환 (알림은 OrderPage에서 표시)
